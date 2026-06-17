@@ -282,11 +282,10 @@
       ventasSubTab: 'ventas', 
       searchQuery: '',
       editProductId: null,
-      tempImageBase64: '', // Guardará temporalmente la foto optimizada en base64
+      tempImageBase64: '', 
       saleItems: [] 
     };
 
-    // Funciones de persistencia local
     function loadData() {
       try {
         const saved = localStorage.getItem("dulceria_data");
@@ -309,7 +308,8 @@
 
     // ─── UTILERÍAS ──────────────────────────────────────────────────────────────
     function formatCurrency(n) {
-      return '$' + Number(n || 0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      // Forzamos redondeo matemático estricto para asegurar cero decimales
+      return '$' + Math.round(n || 0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     }
 
     function getCurrentMonthKey() {
@@ -337,7 +337,6 @@
         render();
       },
 
-      // --- Compresión y conversión nativa de imágenes ---
       handleImageUpload: function(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -346,9 +345,8 @@
         reader.onload = function(e) {
           const img = new Image();
           img.onload = function() {
-            // Lienzo Canvas para achicar la imagen automáticamente y cuidar el almacenamiento local
             const canvas = document.createElement('canvas');
-            const MAX_SIZE = 150; // Tamaño máximo en píxeles para las miniaturas
+            const MAX_SIZE = 150; 
             let width = img.width;
             let height = img.height;
 
@@ -363,7 +361,6 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
             
-            // Guardamos comprimido en calidad media-alta JPEG
             state.tempImageBase64 = canvas.toDataURL('image/jpeg', 0.75);
             
             const previewContainer = document.getElementById('p-img-preview');
@@ -376,7 +373,6 @@
         reader.readAsDataURL(file);
       },
 
-      // --- Gestión de Inventario ---
       saveProduct: function() {
         const name = document.getElementById('p-name').value.trim();
         const category = document.getElementById('p-category').value;
@@ -442,7 +438,6 @@
         renderInventoryTable();
       },
 
-      // --- Gestión de Ventas ---
       addSaleItem: function() {
         const prodId = document.getElementById('vs-product').value;
         const qty = parseInt(document.getElementById('vs-qty').value) || 1;
@@ -516,7 +511,6 @@
         render();
       },
 
-      // --- Gestión de Gastos ---
       saveExpense: function() {
         const desc = document.getElementById('exp-desc').value.trim();
         const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
@@ -547,7 +541,6 @@
         render();
       },
 
-      // --- Gestión de Otros Ingresos ---
       saveIncome: function() {
         const desc = document.getElementById('inc-desc').value.trim();
         const amount = parseFloat(document.getElementById('inc-amount').value) || 0;
@@ -579,7 +572,6 @@
         render();
       },
 
-      // --- Generación de Cierre / Reportes ---
       closeMonthReport: function() {
         const month = getCurrentMonthKey();
         const monthsNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -636,6 +628,8 @@
       
       if (state.currentTab === 'dashboard') {
         const month = getCurrentMonthKey();
+        
+        // 1. Cálculos del mes actual
         const monthSales = state.data.sales.filter(s => s.month === month);
         const monthExpenses = state.data.expenses.filter(e => e.month === month);
         const monthIncomes = (state.data.incomes || []).filter(i => i.month === month);
@@ -647,9 +641,21 @@
         const totalGastos = monthExpenses.reduce((a, e) => a + e.amount, 0);
         const utilidad = totalIngresos - totalGastos;
 
+        // 2. Cálculos de inventario actual
         const invCosto = state.data.products.reduce((a, p) => a + (p.cost * p.stock), 0);
         const invVenta = state.data.products.reduce((a, p) => a + (p.price * p.stock), 0);
         const gananciaPotencial = invVenta - invCosto;
+
+        // 3. CÁLCULO HISTÓRICO DE EFECTIVO (Flujo real en caja)
+        const todoVentas = state.data.sales.reduce((a, s) => a + s.total, 0);
+        const todoOtrosIngresos = (state.data.incomes || []).reduce((a, i) => a + i.amount, 0);
+        const todoGastos = state.data.expenses.reduce((a, e) => a + e.amount, 0);
+        
+        // Lo que el negocio debe tener físicamente guardado en caja
+        const efectivoEnCaja = todoVentas + todoOtrosIngresos - todoGastos;
+        
+        // Lo que tendría sumando efectivo acumulado + vendiendo toda la mercancía actual
+        const valorTotalNegocio = efectivoEnCaja + invVenta;
 
         const topProducts = [...state.data.products].map(p => ({
           name: p.name,
@@ -666,24 +672,49 @@
         `).join('');
 
         container.innerHTML = `
+          <!-- SECCIÓN 1: CAJA Y CAPITAL TOTAL DEL NEGOCIO -->
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="margin: 0; font-size: 22px;">💰 Caja y Capital Total</h2>
+          </div>
+          <div class="grid-stats">
+            <div class="card" style="background: #FFFCEB; border: 1.5px solid #F5A623;">
+              <span class="stat-label" style="color: #B47000;">💵 DEBO TENER EN EFECTIVO</span>
+              <span class="stat-value" style="color: #2D2016;">${formatCurrency(efectivoEnCaja)}</span>
+              <span class="stat-sub">Flujo real acumulado en caja</span>
+            </div>
+            <div class="card">
+              <span class="stat-label">📦 Inventario (Precio Venta)</span>
+              <span class="stat-value" style="color: #4A90D9;">${formatCurrency(invVenta)}</span>
+              <span class="stat-sub">Si vendes todo lo que hay hoy</span>
+            </div>
+            <div class="card" style="background: #EBF7EB; border: 1.5px solid #6DBE45;">
+              <span class="stat-label" style="color: #2E6316;">🏪 VALOR TOTAL DEL NEGOCIO</span>
+              <span class="stat-value" style="color: #2E6316;">${formatCurrency(valorTotalNegocio)}</span>
+              <span class="stat-sub">Efectivo en caja + Venta de inventario</span>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: DESEMPEÑO DEL MES ACTUAL -->
+          <hr style="border: 0; border-top: 1px dashed #EDE0D0; margin: 10px 0;">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <h2 style="margin: 0; font-size: 22px;">🍬 Resumen del Negocio</h2>
+            <h2 style="margin: 0; font-size: 22px;">🍬 Rendimiento del Mes</h2>
             ${getMonthBadgeHTML()}
           </div>
           <div class="grid-stats">
             <div class="card">
-              <span class="stat-label">Ingresos Totales</span>
+              <span class="stat-label">Ingresos del Mes</span>
               <span class="stat-value" style="color: #6DBE45;">${formatCurrency(totalIngresos)}</span>
               <span class="stat-sub">Ventas: ${formatCurrency(totalVentas)} | Otros: ${formatCurrency(totalOtrosIngresos)}</span>
             </div>
             <div class="card"><span class="stat-label">Gastos del mes</span><span class="stat-value" style="color: #E84040;">${formatCurrency(totalGastos)}</span></div>
-            <div class="card"><span class="stat-label">Utilidad Neta</span><span class="stat-value" style="color: ${utilidad >= 0 ? '#6DBE45' : '#E84040'};">${formatCurrency(utilidad)}</span></div>
+            <div class="card"><span class="stat-label">Utilidad Neta del Mes</span><span class="stat-value" style="color: ${utilidad >= 0 ? '#6DBE45' : '#E84040'};">${formatCurrency(utilidad)}</span></div>
           </div>
           <div class="grid-stats">
-            <div class="card"><span class="stat-label">Inventario (a costo)</span><span class="stat-value" style="color: #4A90D9;">${formatCurrency(invCosto)}</span><span class="stat-sub">${state.data.products.length} productos</span></div>
-            <div class="card"><span class="stat-label">Inventario (precio venta)</span><span class="stat-value" style="color: #F5A623;">${formatCurrency(invVenta)}</span></div>
-            <div class="card"><span class="stat-label">Ganancia Potencial</span><span class="stat-value" style="color: #E8603C;">${formatCurrency(gananciaPotencial)}</span></div>
+            <div class="card"><span class="stat-label">Inventario (a costo)</span><span class="stat-value" style="color: #8B7355;">${formatCurrency(invCosto)}</span><span class="stat-sub">${state.data.products.length} productos</span></div>
+            <div class="card"><span class="stat-label">Ganancia Potencial Restante</span><span class="stat-value" style="color: #E8603C;">${formatCurrency(gananciaPotencial)}</span></div>
           </div>
+
+          <!-- SECCIÓN 3: TABLA TOP VENTAS -->
           <div class="card">
             <h3 style="margin: 0 0 14px 0; font-size: 16px;">🏆 Top productos vendidos este mes</h3>
             ${topProducts.length === 0 || topProducts.every(p => p.sold === 0) ? `<p style="color: #8B7355; margin: 0;">Sin ventas registradas este mes.</p>` : `
