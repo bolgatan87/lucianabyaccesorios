@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Dulcería - Gestión de Negocio</title>
+  
+  <style>
+    /* Estilos globales y paleta de colores del negocio */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #FFF8F0;
+      color: #2D2016;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      box-sizing: border-box;
+    }
+    *, *:before, *:after {
+      box-sizing: inherit;
+    }
+
+    /* Header y Navegación Sticky */
+    .header {
+      background: #E8603C;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-title {
+      color: #FFFFFF;
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: -0.5px;
+      margin: 0;
+    }
+    .header-sub {
+      color: rgba(255,255,255,0.75);
+      font-size: 12px;
+    }
+
+    .nav-bar {
+      background: #FFFFFF;
+      border-bottom: 1px solid #EDE0D0;
+      display: flex;
+      overflow-x: auto;
+      position: sticky;
+      top: 61px;
+      z-index: 99;
+    }
+    .nav-btn {
+      background: transparent;
+      border: none;
+      padding: 14px 16px;
+      font-weight: 500;
+      font-size: 14px;
+      color: #8B7355;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      white-space: nowrap;
+      flex: 1 0 auto;
+      transition: all 0.2s;
+    }
+    .nav-btn.active {
+      font-weight: 700;
+      color: #E8603C;
+      border-bottom-color: #E8603C;
+    }
+
+    /* Contenedores y Cuadrículas */
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .grid-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    /* Tarjetas (Cards) */
+    .card {
+      background: #FFFFFF;
+      border: 1px solid #EDE0D0;
+      border-radius: 16px;
+      padding: 22px 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .stat-label {
+      color: #8B7355;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .stat-value {
+      font-size: 26px;
+      font-weight: 800;
+      margin-top: 6px;
+    }
+    .stat-sub {
+      color: #8B7355;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    /* Formularios y Controles */
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1 1 140px;
+    }
+    .input-group.wide {
+      flex: 2 1 200px;
+    }
+    .input-group.narrow {
+      flex: 0 0 90px;
+    }
+    .input-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #8B7355;
+      text-transform: uppercase;
+    }
+    .input-field, .select-field {
+      border: 1.5px solid #EDE0D0;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 14px;
+      color: #2D2016;
+      background: #FFF8F0;
+      outline: none;
+      width: 100%;
+    }
+
+    /* Botones */
+    .btn {
+      background: #E8603C;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 22px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-secondary { background: #F5A623; }
+    .btn-info { background: #4A90D9; }
+    .btn-danger { background: #E84040; }
+    .btn-muted { background: #8B7355; }
+    .btn-small { padding: 6px 12px; font-size: 12px; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    /* Tablas Responsivas */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 16px;
+      border: 1px solid #EDE0D0;
+      background: #FFFFFF;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th {
+      background: #FFF8F0;
+      color: #8B7355;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    td {
+      padding: 12px;
+      border-top: 1px solid #EDE0D0;
+    }
+
+    /* Badges */
+    .badge-month {
+      background: #F5A623;
+      color: white;
+      border-radius: 20px;
+      padding: 3px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-block;
+      width: fit-content;
+    }
+    .badge-tab {
+      display: flex;
+      gap: 4px;
+      background: #EDE0D0;
+      border-radius: 12px;
+      padding: 4px;
+      width: fit-content;
+      flex-wrap: wrap;
+    }
+    .subtab-btn {
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 24px;
+      font-weight: 700;
+      font-size: 14px;
+      color: #8B7355;
+      cursor: pointer;
+    }
+    .subtab-btn.active {
+      background: #E8603C;
+      color: white;
+    }
+
+    ::-webkit-scrollbar { height: 5px; width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #EDE0D0; border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <span style="font-size: 28px;">🍬</span>
+    <div>
+      <h1 class="header-title">Mi Dulcería</h1>
+      <div class="header-sub">Gestión de tu negocio</div>
+    </div>
+  </div>
+
+  <div class="nav-bar">
+    <button class="nav-btn active" id="btn-dashboard" onclick="actions.changeTab('dashboard')">🏠 Principal</button>
+    <button class="nav-btn" id="btn-inventario" onclick="actions.changeTab('inventario')">📦 Inventario</button>
+    <button class="nav-btn" id="btn-ventas" onclick="actions.changeTab('ventas')">💰 Ventas & Gastos</button>
+    <button class="nav-btn" id="btn-reportes" onclick="actions.changeTab('reportes')">📊 Reportes</button>
+  </div>
+
+  <div class="container" id="main-content"></div>
+
+  <script>
+    // ─── ESTADO GLOBAL DE LA APLICACIÓN ─────────────────────────────────────────
+    const INITIAL_STATE = {
+      products: [],
+      sales: [],
+      expenses: [],
+      incomes: [], // Historial de otros ingresos añadidos manualmente
+      reports: []
+    };
+
+    let state = {
+      data: loadData(),
+      currentTab: 'dashboard',
+      ventasSubTab: 'ventas', 
+      searchQuery: '',
+      editProductId: null,
+      saleItems: [] 
+    };
+
+    // Funciones de persistencia local
+    function loadData() {
+      try {
+        const saved = localStorage.getItem("dulceria_data");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          // Asegurar que exista la estructura para ingresos nuevos si venía de una versión anterior
+          if (!parsed.incomes) parsed.incomes = [];
+          return parsed;
+        }
+        return JSON.parse(JSON.stringify(INITIAL_STATE));
+      } catch (e) {
+        return JSON.parse(JSON.stringify(INITIAL_STATE));
+      }
+    }
+
+    function saveData() {
+      try {
+        localStorage.setItem("dulceria_data", JSON.stringify(state.data));
+      } catch (e) {}
+    }
+
+    // ─── UTILERÍAS ──────────────────────────────────────────────────────────────
+    function formatCurrency(n) {
+      return '$' + Number(n || 0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function getCurrentMonthKey() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, "0");
+    }
+
+    function getMonthBadgeHTML() {
+      const months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+      const d = new Date();
+      return `<span class="badge-month">${months[d.getMonth()]} ${d.getFullYear()}</span>`;
+    }
+
+    // ─── CONTROLADORES DE ACCIÓN (ACTIONS) ──────────────────────────────────────
+    window.actions = {
+      changeTab: function(tabId) {
+        state.currentTab = tabId;
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`btn-${tabId}`).classList.add('active');
+        render();
+      },
+
+      changeSubTab: function(subTabId) {
+        state.ventasSubTab = subTabId;
+        render();
+      },
+
+      // --- Gestión de Inventario ---
+      saveProduct: function() {
+        const name = document.getElementById('p-name').value.trim();
+        const category = document.getElementById('p-category').value;
+        const cost = parseFloat(document.getElementById('p-cost').value) || 0;
+        const price = parseFloat(document.getElementById('p-price').value) || 0;
+        const stock = parseInt(document.getElementById('p-stock').value) || 0;
+
+        if (!name || cost <= 0 || price <= 0) {
+          alert('Por favor, completa los campos requeridos con valores válidos.');
+          return;
+        }
+
+        if (state.editProductId) {
+          state.data.products = state.data.products.map(p => p.id === state.editProductId ? {
+            id: p.id, name, category, cost, price, stock
+          } : p);
+          state.editProductId = null;
+        } else {
+          state.data.products.push({
+            id: Date.now().toString(), name, category, cost, price, stock
+          });
+        }
+
+        saveData();
+        render();
+      },
+
+      editProduct: function(id) {
+        state.editProductId = id;
+        render();
+        const p = state.data.products.find(x => x.id === id);
+        if (p) {
+          document.getElementById('p-name').value = p.name;
+          document.getElementById('p-category').value = p.category;
+          document.getElementById('p-cost').value = p.cost;
+          document.getElementById('p-price').value = p.price;
+          document.getElementById('p-stock').value = p.stock;
+        }
+      },
+
+      cancelEdit: function() {
+        state.editProductId = null;
+        render();
+      },
+
+      deleteProduct: function(id) {
+        if (!confirm('¿Estás seguro de eliminar este producto del inventario?')) return;
+        state.data.products = state.data.products.filter(p => p.id !== id);
+        saveData();
+        render();
+      },
+
+      handleSearch: function(val) {
+        state.searchQuery = val.toLowerCase();
+        renderInventoryTable();
+      },
+
+      // --- Gestión de Ventas ---
+      addSaleItem: function() {
+        const prodId = document.getElementById('vs-product').value;
+        const qty = parseInt(document.getElementById('vs-qty').value) || 1;
+        const prod = state.data.products.find(p => p.id === prodId);
+
+        if (!prod || qty < 1) return;
+        if (qty > prod.stock) {
+          alert(`No puedes vender más de las unidades disponibles en stock (${prod.stock}).`);
+          return;
+        }
+
+        const existing = state.saleItems.find(i => i.id === prod.id);
+        if (existing) {
+          if ((existing.qty + qty) > prod.stock) {
+            alert(`La cantidad total en el carrito supera el stock disponible (${prod.stock}).`);
+            return;
+          }
+          existing.qty += qty;
+        } else {
+          state.saleItems.push({ id: prod.id, name: prod.name, price: prod.price, cost: prod.cost, qty: qty });
+        }
+
+        renderVentasSeccion();
+      },
+
+      removeSaleItem: function(index) {
+        state.saleItems.splice(index, 1);
+        renderVentasSeccion();
+      },
+
+      processSale: function() {
+        if (state.saleItems.length === 0) return;
+
+        const total = state.saleItems.reduce((a, i) => a + (i.price * i.qty), 0);
+        const costo = state.saleItems.reduce((a, i) => a + (i.cost * i.qty), 0);
+        const note = document.getElementById('vs-note').value.trim();
+        const month = getCurrentMonthKey();
+
+        // Descontar inventario
+        state.data.products = state.data.products.map(p => {
+          const item = state.saleItems.find(i => i.id === p.id);
+          return item ? { ...p, stock: Math.max(0, p.stock - item.qty) } : p;
+        });
+
+        state.data.sales.push({
+          id: Date.now().toString(),
+          month,
+          date: new Date().toISOString(),
+          items: state.saleItems,
+          total,
+          costo,
+          note
+        });
+
+        state.saleItems = [];
+        saveData();
+        render();
+      },
+
+      annulSale: function(id) {
+        if (!confirm('¿Anular esta venta? El stock regresará al inventario automáticamente.')) return;
+        const sale = state.data.sales.find(s => s.id === id);
+        if (!sale) return;
+
+        // Devolver stock
+        state.data.products = state.data.products.map(p => {
+          const item = sale.items.find(i => i.id === p.id);
+          return item ? { ...p, stock: p.stock + item.qty } : p;
+        });
+
+        state.data.sales = state.data.sales.filter(s => s.id !== id);
+        saveData();
+        render();
+      },
+
+      // --- Gestión de Gastos ---
+      saveExpense: function() {
+        const desc = document.getElementById('exp-desc').value.trim();
+        const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
+        const category = document.getElementById('exp-cat').value || "General";
+
+        if (!desc || amount <= 0) {
+          alert('Ingresa una descripción y monto válido para el gasto.');
+          return;
+        }
+
+        state.data.expenses.push({
+          id: Date.now().toString(),
+          month: getCurrentMonthKey(),
+          date: new Date().toISOString(),
+          description: desc,
+          amount,
+          category
+        });
+
+        saveData();
+        render();
+      },
+
+      deleteExpense: function(id) {
+        if (!confirm('¿Eliminar de forma permanente este registro de gasto?')) return;
+        state.data.expenses = state.data.expenses.filter(e => e.id !== id);
+        saveData();
+        render();
+      },
+
+      // --- Gestión de Otros Ingresos ---
+      saveIncome: function() {
+        const desc = document.getElementById('inc-desc').value.trim();
+        const amount = parseFloat(document.getElementById('inc-amount').value) || 0;
+        const category = document.getElementById('inc-cat').value || "General";
+
+        if (!desc || amount <= 0) {
+          alert('Ingresa una descripción y monto válido para el ingreso.');
+          return;
+        }
+
+        if (!state.data.incomes) state.data.incomes = [];
+        state.data.incomes.push({
+          id: Date.now().toString(),
+          month: getCurrentMonthKey(),
+          date: new Date().toISOString(),
+          description: desc,
+          amount,
+          category
+        });
+
+        saveData();
+        render();
+      },
+
+      deleteIncome: function(id) {
+        if (!confirm('¿Eliminar de forma permanente este registro de ingreso?')) return;
+        state.data.incomes = state.data.incomes.filter(i => i.id !== id);
+        saveData();
+        render();
+      },
+
+      // --- Generación de Cierre / Reportes ---
+      closeMonthReport: function() {
+        const month = getCurrentMonthKey();
+        const monthsNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+        const d = new Date();
+        const monthName = `${monthsNames[d.getMonth()]} ${d.getFullYear()}`;
+
+        const monthSales = state.data.sales.filter(s => s.month === month);
+        const monthExpenses = state.data.expenses.filter(e => e.month === month);
+        const monthIncomes = (state.data.incomes || []).filter(i => i.month === month);
+
+        const totalVentas = monthSales.reduce((a, s) => a + s.total, 0);
+        const totalOtrosIngresos = monthIncomes.reduce((a, i) => a + i.amount, 0);
+        const ingresosTotales = totalVentas + totalOtrosIngresos;
+
+        const gastos = monthExpenses.reduce((a, e) => a + e.amount, 0);
+        const gananciaBruta = monthSales.reduce((a, s) => a + (s.total - s.costo), 0);
+        const invSinGanancia = state.data.products.reduce((a, p) => a + (p.cost * p.stock), 0);
+        const invConGanancia = state.data.products.reduce((a, p) => a + (p.price * p.stock), 0);
+
+        const report = {
+          id: Date.now().toString(),
+          month,
+          monthName,
+          closedAt: new Date().toISOString(),
+          ingresos: ingresosTotales,
+          gastos,
+          utilidad: ingresosTotales - gastos,
+          gananciaBruta,
+          invSinGanancia,
+          invConGanancia,
+          salesCount: monthSales.length,
+          topProducts: state.data.products.map(p => ({
+            name: p.name,
+            sold: monthSales.flatMap(s => s.items).filter(i => i.id === p.id).reduce((a, i) => a + i.qty, 0)
+          })).filter(p => p.sold > 0).sort((a,b) => b.sold - a.sold).slice(0, 5)
+        };
+
+        const idx = state.data.reports.findIndex(r => r.month === month);
+        if (idx !== -1) {
+          state.data.reports[idx] = report;
+        } else {
+          state.data.reports.push(report);
+        }
+
+        saveData();
+        render();
+        alert('Reporte mensual procesado y archivado correctamente.');
+      }
+    };
+
+    // ─── RENDERIZADO DE VISTAS (TEMPLATES) ──────────────────────────────────────
+    function render() {
+      const container = document.getElementById('main-content');
+      
+      if (state.currentTab === 'dashboard') {
+        const month = getCurrentMonthKey();
+        const monthSales = state.data.sales.filter(s => s.month === month);
+        const monthExpenses = state.data.expenses.filter(e => e.month === month);
+        const monthIncomes = (state.data.incomes || []).filter(i => i.month === month);
+
+        const totalVentas = monthSales.reduce((a, s) => a + s.total, 0);
+        const totalOtrosIngresos = monthIncomes.reduce((a, i) => a + i.amount, 0);
+        
+        // El ingreso total es la suma de las ventas del negocio más los otros ingresos directos
+        const totalIngresos = totalVentas + totalOtrosIngresos;
+        const totalGastos = monthExpenses.reduce((a, e) => a + e.amount, 0);
+        const utilidad = totalIngresos - totalGastos;
+
+        const invCosto = state.data.products.reduce((a, p) => a + (p.cost * p.stock), 0);
+        const invVenta = state.data.products.reduce((a, p) => a + (p.price * p.stock), 0);
+        const gananciaPotencial = invVenta - invCosto;
+
+        const topProducts = [...state.data.products].map(p => ({
+          name: p.name,
+          stock: p.stock,
+          sold: monthSales.flatMap(s => s.items).filter(i => i.id === p.id).reduce((a, i) => a + i.qty, 0)
+        })).sort((a, b) => b.sold - a.sold).slice(0, 5);
+
+        let topRows = topProducts.map(p => `
+          <tr>
+            <td style="font-weight: 600;">${p.name}</td>
+            <td style="text-align: right; color: #E8603C; font-weight: 700;">${p.sold}</td>
+            <td style="text-align: right; color: ${p.stock < 5 ? '#E84040' : '#8B7355'}">${p.stock}</td>
+          </tr>
+        `).join('');
+
+        container.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <h2 style="margin: 0; font-size: 22px;">🍬 Resumen del Negocio</h2>
+            ${getMonthBadgeHTML()}
+          </div>
+          <div class="grid-stats">
+            <div class="card">
+              <span class="stat-label">Ingresos Totales</span>
+              <span class="stat-value" style="color: #6DBE45;">${formatCurrency(totalIngresos)}</span>
+              <span class="stat-sub">Ventas: ${formatCurrency(totalVentas)} | Otros: ${formatCurrency(totalOtrosIngresos)}</span>
+            </div>
+            <div class="card"><span class="stat-label">Gastos del mes</span><span class="stat-value" style="color: #E84040;">${formatCurrency(totalGastos)}</span></div>
+            <div class="card"><span class="stat-label">Utilidad Neta</span><span class="stat-value" style="color: ${utilidad >= 0 ? '#6DBE45' : '#E84040'};">${formatCurrency(utilidad)}</span></div>
+          </div>
+          <div class="grid-stats">
+            <div class="card"><span class="stat-label">Inventario (a costo)</span><span class="stat-value" style="color: #4A90D9;">${formatCurrency(invCosto)}</span><span class="stat-sub">${state.data.products.length} productos</span></div>
+            <div class="card"><span class="stat-label">Inventario (precio venta)</span><span class="stat-value" style="color: #F5A623;">${formatCurrency(invVenta)}</span></div>
+            <div class="card"><span class="stat-label">Ganancia Potencial</span><span class="stat-value" style="color: #E8603C;">${formatCurrency(gananciaPotencial)}</span></div>
+          </div>
+          <div class="card">
+            <h3 style="margin: 0 0 14px 0; font-size: 16px;">🏆 Top productos vendidos este mes</h3>
+            ${topProducts.length === 0 || topProducts.every(p => p.sold === 0) ? `<p style="color: #8B7355; margin: 0;">Sin ventas registradas este mes.</p>` : `
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>Producto</th><th style="text-align: right;">Vendidos</th><th style="text-align: right;">Stock Actual</th></tr>
+                  </thead>
+                  <tbody>${topRows}</tbody>
+                </table>
+              </div>
+            `}
+          </div>
+        `;
+      } 
+      
+      else if (state.currentTab === 'inventario') {
+        container.innerHTML = `
+          <h2 style="margin: 0;">📦 Inventario</h2>
+          <div class="card">
+            <h3 style="margin: 0 0 14px 0; font-size: 15px;" id="inv-form-title">${state.editProductId ? '✏️ Editar producto' : '➕ Agregar producto'}</h3>
+            <div class="form-row">
+              <div class="input-group wide"><label>Nombre del producto *</label><input type="text" id="p-name" class="input-field" placeholder="Ej: Chupeta Bombombum"></div>
+              <div class="input-group">
+                <label>Categoría</label>
+                <select id="p-category" class="select-field">
+                  <option value="Dulces">Dulces</option><option value="Snacks">Snacks</option><option value="Bebidas">Bebidas</option><option value="Cositas">Cositas</option><option value="Otro">Otro</option>
+                </select>
+              </div>
+              <div class="input-group narrow"><label>Costo ($) *</label><input type="number" id="p-cost" class="input-field" placeholder="0"></div>
+              <div class="input-group narrow"><label>Venta ($) *</label><input type="number" id="p-price" class="input-field" placeholder="0"></div>
+              <div class="input-group narrow"><label>Stock *</label><input type="number" id="p-stock" class="input-field" placeholder="0"></div>
+            </div>
+            <div style="margin-top: 14px; display: flex; gap: 10px;">
+              <button class="btn" onclick="actions.saveProduct()">${state.editProductId ? 'Guardar Cambios' : 'Agregar Producto'}</button>
+              ${state.editProductId ? `<button class="btn btn-muted" onclick="actions.cancelEdit()">Cancelar</button>` : ''}
+            </div>
+          </div>
+          <div class="input-group"><label>Buscar Producto</label><input type="text" class="input-field" placeholder="Filtrar por nombre o categoría..." oninput="actions.handleSearch(this.value)"></div>
+          <div id="inventory-table-container"></div>
+        `;
+        renderInventoryTable();
+      } 
+      
+      else if (state.currentTab === 'ventas') {
+        container.innerHTML = `
+          <div class="badge-tab">
+            <button class="subtab-btn ${state.ventasSubTab === 'ventas' ? 'active' : ''}" onclick="actions.changeSubTab('ventas')">💰 Ventas</button>
+            <button class="subtab-btn ${state.ventasSubTab === 'gastos' ? 'active' : ''}" onclick="actions.changeSubTab('gastos')">💸 Gastos</button>
+            <button class="subtab-btn ${state.ventasSubTab === 'ingresos' ? 'active' : ''}" onclick="actions.changeSubTab('ingresos')">📈 Otros Ingresos</button>
+          </div>
+          <div id="ventas-seccion-dinamica"></div>
+        `;
+        renderVentasSeccion();
+      } 
+      
+      else if (state.currentTab === 'reportes') {
+        const month = getCurrentMonthKey();
+        const hasCurrentReport = state.data.reports.some(r => r.month === month);
+
+        let reportsHTML = state.data.reports.length === 0 ? `
+          <div class="card" style="text-align: center; color: #8B7355; padding: 30px;">
+            <p style="font-size: 18px; margin: 0 0 8px 0;">📁 Sin reportes guardados</p>
+            <p style="margin: 0;">Presiona el botón superior para archivar el rendimiento de este periodo.</p>
+          </div>
+        ` : [...state.data.reports].reverse().map(r => `
+          <div class="card" style="border: 2px solid ${r.month === month ? '#F5A623' : '#EDE0D0'}; gap: 14px; margin-bottom: 5px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+              <h3 style="margin: 0; font-size: 17px;">📅 ${r.monthName} ${r.month === month ? '<span class="badge-month" style="font-size:11px; padding:2px 8px;">Mes Actual</span>' : ''}</h3>
+              <span style="font-size: 12px; color: #8B7355;">Guardado el: ${new Date(r.closedAt).toLocaleDateString("es-CO")}</span>
+            </div>
+            <div class="grid-stats">
+              <div class="card" style="padding:12px;"><span class="stat-label">Ingresos Totales</span><span class="stat-value" style="color:#6DBE45; font-size:20px;">${formatCurrency(r.ingresos)}</span></div>
+              <div class="card" style="padding:12px;"><span class="stat-label">Gastos</span><span class="stat-value" style="color:#E84040; font-size:20px;">${formatCurrency(r.gastos)}</span></div>
+              <div class="card" style="padding:12px;"><span class="stat-label">Utilidad Neta</span><span class="stat-value" style="color:${r.utilidad >= 0 ? '#6DBE45' : '#E84040'}; font-size:20px;">${formatCurrency(r.utilidad)}</span></div>
+              <div class="card" style="padding:12px;"><span class="stat-label">Ganancia Bruta (Ventas)</span><span class="stat-value" style="color:#E8603C; font-size:20px;">${formatCurrency(r.gananciaBruta)}</span></div>
+            </div>
+            <div class="grid-stats">
+              <div class="card" style="padding:12px;"><span class="stat-label">Inv. a Costo</span><span class="stat-value" style="color:#4A90D9; font-size:18px;">${formatCurrency(r.invSinGanancia)}</span><span class="stat-sub">${r.salesCount} ventas realizadas</span></div>
+              <div class="card" style="padding:12px;"><span class="stat-label">Inv. a Venta</span><span class="stat-value" style="color:#F5A623; font-size:18px;">${formatCurrency(r.invConGanancia)}</span></div>
+            </div>
+            ${r.topProducts && r.topProducts.length > 0 ? `
+              <div>
+                <div style="font-weight:700; font-size:13px; margin-bottom:6px;">🏆 Los 5 Más Vendidos:</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  ${r.topProducts.map(tp => `<span style="background:#FFF8F0; border:1px solid #EDE0D0; padding:4px 12px; border-radius:20px; font-size:13px;">${tp.name} (${tp.sold})</span>`).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+
+        container.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+            <h2 style="margin: 0;">📊 Reportes Históricos</h2>
+            <button class="btn btn-secondary" onclick="actions.closeMonthReport()">${hasCurrentReport ? '🔄 Actualizar Cierre de Mes' : '📋 Guardar Cierre de Mes'}</button>
+          </div>
+          ${reportsHTML}
+        `;
+      }
+    }
+
+    // Renderizado específico de subcomponentes dinámicos
+    function renderInventoryTable() {
+      const container = document.getElementById('inventory-table-container');
+      if (!container) return;
+
+      const filtered = state.data.products.filter(p => 
+        p.name.toLowerCase().includes(state.searchQuery) || 
+        p.category.toLowerCase().includes(state.searchQuery)
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="table-wrapper" style="padding: 20px; color: #8B7355;">No se encontraron productos coincidentes.</div>`;
+        return;
+      }
+
+      let rows = filtered.map(p => {
+        const margin = p.cost > 0 ? (((p.price - p.cost) / p.cost) * 100).toFixed(0) : 0;
+        return `
+          <tr>
+            <td style="font-weight: 600;">${p.name}</td>
+            <td style="color: #8B7355;">${p.category}</td>
+            <td>${formatCurrency(p.cost)}</td>
+            <td style="color: #E8603C; font-weight: 700;">${formatCurrency(p.price)}</td>
+            <td style="font-weight: ${p.stock < 5 ? '700' : '400'}; color: ${p.stock < 5 ? '#E84040' : 'inherit'};">${p.stock}</td>
+            <td style="color: #6DBE45; font-weight: 700;">${margin}%</td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-info btn-small" onclick="actions.editProduct('${p.id}')">Editar</button>
+                <button class="btn btn-danger btn-small" onclick="actions.deleteProduct('${p.id}')">X</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Producto</th><th>Categoría</th><th>Costo</th><th>Precio Venta</th><th>Stock</th><th>Margen</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderVentasSeccion() {
+      const container = document.getElementById('ventas-seccion-dinamica');
+      if (!container) return;
+
+      const month = getCurrentMonthKey();
+
+      if (state.ventasSubTab === 'ventas') {
+        const availableProducts = state.data.products.filter(p => p.stock > 0);
+        const monthSales = state.data.sales.filter(s => s.month === month);
+        const currentSaleTotal = state.saleItems.reduce((a, i) => a + (i.price * i.qty), 0);
+
+        let options = availableProducts.map(p => `<option value="${p.id}">${p.name} (Disp: ${p.stock}) — ${formatCurrency(p.price)}</option>`).join('');
+        
+        let basketRows = state.saleItems.map((item, index) => `
+          <tr>
+            <td>${item.name}</td>
+            <td style="text-align: right;">${item.qty}</td>
+            <td style="text-align: right; font-weight: 700;">${formatCurrency(item.price * item.qty)}</td>
+            <td style="text-align: right;"><button class="btn btn-danger btn-small" onclick="actions.removeSaleItem(${index})">✕</button></td>
+          </tr>
+        `).join('');
+
+        let salesHistoryRows = [...monthSales].reverse().map(s => `
+          <tr>
+            <td style="color: #8B7355;">${new Date(s.date).toLocaleDateString("es-CO")}</td>
+            <td><span style="font-size:12px; color:#2D2016;">${s.items.map(i => `${i.name} x${i.qty}`).join(', ')}</span>${s.note ? `<br><small style="color:#F5A623;">📝 ${s.note}</small>` : ''}</td>
+            <td style="text-align: right; font-weight: 700; color: #E8603C;">${formatCurrency(s.total)}</td>
+            <td style="text-align: right; color: #6DBE45;">${formatCurrency(s.total - s.costo)}</td>
+            <td style="text-align: right;"><button class="btn btn-danger btn-small" onclick="actions.annulSale('${s.id}')">Anular</button></td>
+          </tr>
+        `).join('');
+
+        container.innerHTML = `
+          <div class="card">
+            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Nueva Venta</h3>
+            <div class="form-row">
+              <div class="input-group wide">
+                <label>Seleccionar Producto</label>
+                <select id="vs-product" class="select-field">
+                  <option value="">Selecciona un dulce o snack...</option>
+                  ${options}
+                </select>
+              </div>
+              <div class="input-group narrow"><label>Cant.</label><input type="number" id="vs-qty" class="input-field" value="1" min="1"></div>
+              <button class="btn" onclick="actions.addSaleItem()">Agregar al Carrito</button>
+            </div>
+
+            ${state.saleItems.length > 0 ? `
+              <div style="margin-top: 20px;">
+                <div class="table-wrapper">
+                  <table>
+                    <thead><tr><th>Producto</th><th style="text-align: right;">Cant.</th><th style="text-align: right;">Subtotal</th><th></th></tr></thead>
+                    <tbody>${basketRows}</tbody>
+                  </table>
+                </div>
+                <div style="margin-top: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                  <span style="font-size: 20px; font-weight: 800; color: #6DBE45;">Total: ${formatCurrency(currentSaleTotal)}</span>
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <input type="text" id="vs-note" class="input-field" placeholder="Nota u observación" style="max-width: 180px;">
+                    <button class="btn btn-info" onclick="actions.processSale()">Registrar Venta ✓</button>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="card">
+            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Historial de Ventas del Mes ${getMonthBadgeHTML()}</h3>
+            ${monthSales.length === 0 ? `<p style="color: #8B7355; margin:0;">No hay ventas registradas en este periodo.</p>` : `
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>Fecha</th><th>Productos</th><th style="text-align: right;">Total</th><th style="text-align: right;">Ganancia Bruta</th><th></th></tr></thead>
+                  <tbody>${salesHistoryRows}</tbody>
+                </table>
+              </div>
+            `}
+          </div>
+        `;
+      } 
+      
+      else if (state.ventasSubTab === 'gastos') {
+        const monthExpenses = state.data.expenses.filter(e => e.month === month);
+        
+        let expensesRows = [...monthExpenses].reverse().map(e => `
+          <tr>
+            <td style="color: #8B7355;">${new Date(e.date).toLocaleDateString("es-CO")}</td>
+            <td style="font-weight: 600;">${e.description}</td>
+            <td style="color: #8B7355;">${e.category}</td>
+            <td style="text-align: right; color: #E84040; font-weight: 700;">${formatCurrency(e.amount)}</td>
+            <td style="text-align: right;"><button class="btn btn-danger btn-small" onclick="actions.deleteExpense('${e.id}')">✕</button></td>
+          </tr>
+        `).join('');
+
+        container.innerHTML = `
+          <div class="card">
+            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Registrar Gasto</h3>
+            <div class="form-row">
+              <div class="input-group wide"><label>Descripción / Concepto *</label><input type="text" id="exp-desc" class="input-field" placeholder="Ej: Compra bolsas plásticas o pago proveedor"></div>
+              <div class="input-group narrow"><label>Valor ($) *</label><input type="number" id="exp-amount" class="input-field" placeholder="0"></div>
+              <div class="input-group">
+                <label>Categoría</label>
+                <select id="exp-cat" class="select-field">
+                  <option value="General">General</option><option value="Arriendo">Arriendo</option><option value="Servicios">Servicios</option><option value="Transporte">Transporte</option><option value="Proveedor">Proveedor</option>
+                </select>
+              </div>
+              <button class="btn btn-danger" onclick="actions.saveExpense()">Registrar Gasto</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Historial de Gastos del Mes ${getMonthBadgeHTML()}</h3>
+            ${monthExpenses.length === 0 ? `<p style="color: #8B7355; margin:0;">No hay gastos registrados en este periodo.</p>` : `
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th style="text-align: right;">Valor</th><th></th></tr></thead>
+                  <tbody>${expensesRows}</tbody>
+                </table>
+              </div>
+            `}
+          </div>
+        `;
+      } 
+      
+      else if (state.ventasSubTab === 'ingresos') {
+        // Pestaña de Otros Ingresos añadida
+        const monthIncomes = (state.data.incomes || []).filter(i => i.month === month);
+        
+        let incomesRows = [...monthIncomes].reverse().map(i => `
+          <tr>
+            <td style="color: #8B7355;">${new Date(i.date).toLocaleDateString("es-CO")}</td>
+            <td style="font-weight: 600;">${i.description}</td>
+            <td style="color: #8B7355;">${i.category}</td>
+            <td style="text-align: right; color: #6DBE45; font-weight: 700;">${formatCurrency(i.amount)}</td>
+            <td style="text-align: right;"><button class="btn btn-danger btn-small" onclick="actions.deleteIncome('${i.id}')">✕</button></td>
+          </tr>
+        `).join('');
+
+        container.innerHTML = `
+          <div class="card">
+            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Registrar Otro Ingreso (No Ventas)</h3>
+            <div class="form-row">
+              <div class="input-group wide"><label>Descripción / Concepto *</label><input type="text" id="inc-desc" class="input-field" placeholder="Ej: Inyección de capital, servicio extra, premio"></div>
+              <div class="input-group narrow"><label>Valor ($) *</label><input type="number" id="inc-amount" class="input-field" placeholder="0"></div>
+              <div class="input-group">
+                <label>Categoría</label>
+                <select id="inc-cat" class="select-field">
+                  <option value="General">General</option><option value="Capital">Inyección Capital</option><option value="Servicios">Servicios</option><option value="Otros">Otros</option>
+                </select>
+              </div>
+              <button class="btn btn-info" onclick="actions.saveIncome()">Registrar Ingreso</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Historial de Otros Ingresos del Mes ${getMonthBadgeHTML()}</h3>
+            ${monthIncomes.length === 0 ? `<p style="color: #8B7355; margin:0;">No hay otros ingresos registrados en este periodo.</p>` : `
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th style="text-align: right;">Valor</th><th></th></tr></thead>
+                  <tbody>${incomesRows}</tbody>
+                </table>
+              </div>
+            `}
+          </div>
+        `;
+      }
+    }
+
+    // ─── INICIALIZACIÓN AUTOMÁTICA ──────────────────────────────────────────────
+    render();
+  </script>
+</body>
+</html>
