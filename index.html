@@ -27,7 +27,6 @@
       color: var(--dark);
     }
 
-    /* Quitar flechas molestas de los inputs de número */
     input::-webkit-outer-spin-button,
     input::-webkit-inner-spin-button {
       -webkit-appearance: none;
@@ -85,7 +84,7 @@
     .panel { display: none; flex-direction: column; gap: 20px; }
     .panel.active { display: flex; }
 
-    /* Tarjetas y Componentes */
+    /* Tarjetas */
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -105,7 +104,7 @@
     .stat-value { font-size: 26px; font-weight: 800; margin-top: 6px; }
     .stat-sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
 
-    /* Formularios y tablas */
+    /* Formularios */
     .form-group { display: flex; flex-direction: column; gap: 4px; }
     .form-group label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
     .input-field {
@@ -140,7 +139,7 @@
 
     .badge { background: var(--secondary); color: #fff; border-radius: 20px; padding: 3px 14px; font-size: 13px; font-weight: 700; width: fit-content; }
     
-    /* Grid de venta rápida */
+    /* Venta rápida */
     .quick-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -162,10 +161,35 @@
     }
     .prod-img-box { width: 44px; height: 44px; border-radius: 8px; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border); flex-shrink: 0; }
     .prod-img-box img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Modal del Ticket / Factura */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 12px;
+    }
+    .ticket-box {
+      background: #fff;
+      color: #000;
+      font-family: 'Courier New', Courier, monospace;
+      width: 100%;
+      max-width: 340px;
+      padding: 20px;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      box-sizing: border-box;
+    }
+    .ticket-dash { border-top: 1px dashed #000; margin: 10px 0; }
   </style>
 </head>
 <body>
 
+  <!-- Header -->
   <div class="header">
     <span>🍬</span>
     <div>
@@ -174,15 +198,18 @@
     </div>
   </div>
 
+  <!-- Pestañas de Navegación -->
   <div class="nav-tabs">
     <button class="tab-btn active" onclick="switchTab('dashboard', this)">🏠 Principal</button>
     <button class="tab-btn" onclick="switchTab('inventario', this)">📦 Inventario</button>
     <button class="tab-btn" onclick="switchTab('ventas', this)">💰 Ventas & Gastos</button>
+    <button class="tab-btn" onclick="switchTab('clientes', this)">👥 Clientes</button>
     <button class="tab-btn" onclick="switchTab('reportes', this)">📊 Reportes</button>
   </div>
 
   <div class="container">
     
+    <!-- PANEL 1: DASHBOARD -->
     <div id="panel-dashboard" class="panel active">
       <h2>💰 Caja y Capital Total</h2>
       <div class="stats-grid">
@@ -243,6 +270,7 @@
     </div>
 
 
+    <!-- PANEL 2: INVENTARIO -->
     <div id="panel-inventario" class="panel">
       <h2>📦 Inventario</h2>
       <div class="card">
@@ -312,6 +340,7 @@
     </div>
 
 
+    <!-- PANEL 3: VENTAS Y GASTOS -->
     <div id="panel-ventas" class="panel">
       <div style="display: flex; gap: 4px; background: var(--border); padding: 4px; border-radius: 12px; width: fit-content;">
         <button class="btn btn-sm btn-success" id="subtab-ventas-btn" onclick="switchSubTab('ventas')">💰 Ventas</button>
@@ -319,6 +348,7 @@
         <button class="btn btn-sm btn-muted" id="subtab-ingresos-btn" onclick="switchSubTab('ingresos')">📈 Otros Ingresos</button>
       </div>
 
+      <!-- SECCIÓN INTERNA: VENTAS -->
       <div id="sect-ventas" class="sub-sect">
         <div class="card">
           <h3 style="margin: 0 0 12px 0;">Nueva venta</h3>
@@ -343,12 +373,27 @@
               </thead>
               <tbody id="cart-table-body"></tbody>
             </table>
+
+            <!-- DATOS DEL CLIENTE PARA EL TICKET -->
+            <div style="margin-top: 16px; background: var(--bg); padding: 14px; border-radius: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+              <div class="form-group" style="flex: 1 1 200px; position: relative;">
+                <label>👤 Nombre del Cliente</label>
+                <input type="text" id="sale-customer-name" class="input-field" placeholder="Ej: Juan Pérez" list="customers-list">
+                <datalist id="customers-list"></datalist>
+              </div>
+              <div class="form-group" style="flex: 1 1 150px;">
+                <label>📱 Teléfono (Opcional)</label>
+                <input type="text" id="sale-customer-phone" class="input-field" placeholder="Ej: 3001234567">
+              </div>
+              <div class="form-group" style="flex: 1 1 200px;">
+                <label>📝 Nota u Observación</label>
+                <input type="text" id="sale-note" class="input-field" placeholder="Nota de la venta">
+              </div>
+            </div>
+
             <div style="margin-top: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
               <span style="font-size: 20px; font-weight: 800; color: var(--success);" id="cart-total-text">Total: $0</span>
-              <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="text" id="sale-note" class="input-field" placeholder="Nota u observación">
-                <button class="btn btn-success" onclick="executeSale()">Registrar venta ✓</button>
-              </div>
+              <button class="btn btn-success" onclick="executeSale()">Registrar venta ✓</button>
             </div>
           </div>
         </div>
@@ -360,10 +405,10 @@
               <thead>
                 <tr>
                   <th>Fecha</th>
+                  <th>Cliente</th>
                   <th>Productos</th>
                   <th style="text-align: right;">Total</th>
-                  <th style="text-align: right;">Ganancia Bruta</th>
-                  <th></th>
+                  <th style="text-align: right;">Acciones</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -372,6 +417,7 @@
         </div>
       </div>
 
+      <!-- SECCIÓN INTERNA: GASTOS -->
       <div id="sect-gastos" class="sub-sect" style="display: none;">
         <div class="card">
           <h3 style="margin: 0 0 14px 0;">Registrar gasto</h3>
@@ -416,9 +462,10 @@
         </div>
       </div>
 
+      <!-- SECCIÓN INTERNA: OTROS INGRESOS -->
       <div id="sect-ingresos" class="sub-sect" style="display: none;">
         <div class="card">
-          <h3 style="margin: 0 0 14px 0;">Registrar Otro Ingreso (No Ventas)</h3>
+          <h3 style="margin: 0 0 14px 0;">Registrar Otro Ingreso</h3>
           <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
             <div class="form-group" style="flex: 1 1 200px;">
               <label>Descripción / Concepto</label>
@@ -460,6 +507,29 @@
     </div>
 
 
+    <!-- PANEL 4: CLIENTES -->
+    <div id="panel-clientes" class="panel">
+      <h2>👥 Directorio de Clientes</h2>
+      <div class="card">
+        <p style="margin:0 0 12px 0; color: var(--muted);">Aquí quedan guardados de forma automática los clientes a los que les registras ventas.</p>
+        <div style="overflow-x: auto;">
+          <table id="table-clientes">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Teléfono</th>
+                <th style="text-align: right;">Compras Totales</th>
+                <th style="text-align: right;">Monto Total Comprado</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- PANEL 5: REPORTES -->
     <div id="panel-reportes" class="panel">
       <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
         <h2>📊 Reportes Mensuales</h2>
@@ -470,22 +540,44 @@
 
   </div>
 
+  <!-- MODAL / VENTANA DEL TICKET FACTURA -->
+  <div class="modal-overlay" id="ticket-modal">
+    <div class="ticket-box">
+      <div style="text-align: center; font-weight: bold; font-size: 16px;">🍬 MI DULCERÍA 🍬</div>
+      <div style="text-align: center; font-size: 12px; margin-top: 4px;">¡Gracias por tu compra!</div>
+      <div class="ticket-dash"></div>
+      <div id="ticket-info" style="font-size: 12px; line-height: 1.4;"></div>
+      <div class="ticket-dash"></div>
+      <div style="font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <span>CONCEPTO (Cant)</span>
+        <span>TOTAL</span>
+      </div>
+      <div id="ticket-items" style="font-size: 12px; line-height: 1.4;"></div>
+      <div class="ticket-dash"></div>
+      <div style="font-weight: bold; font-size: 14px; display: flex; justify-content: space-between;" id="ticket-total-row"></div>
+      <div id="ticket-note-row" style="font-size: 11px; margin-top: 8px; font-style: italic; color: #555;"></div>
+      <div class="ticket-dash"></div>
+      <div style="text-align: center; font-size: 11px; margin-top: 10px;">Sistema de Control Interno</div>
+      <button class="btn btn-sm btn-muted" style="width: 100%; margin-top: 15px; border-radius: 4px;" onclick="closeTicket()">Cerrar Ventana</button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
   <script>
     const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
     
-    // Estado Global inicial
     let state = {
       products: [],
       sales: [],
       expenses: [],
       incomes: [],
-      reports: []
+      reports: [],
+      customers: [] // Nueva base de datos de clientes
     };
 
     let cart = [];
     let currentProductImageBase64 = "";
 
-    // Cargar datos al arrancar
     function init() {
       const saved = localStorage.getItem("dulceria_data");
       if(saved) {
@@ -496,12 +588,15 @@
       if(!state.expenses) state.expenses = [];
       if(!state.incomes) state.incomes = [];
       if(!state.reports) state.reports = [];
+      if(!state.customers) state.customers = [];
       
       updateBadges();
       renderDashboard();
       renderInventario();
       renderQuickSaleGrid();
       renderVentasTabHistories();
+      renderClientes();
+      updateCustomerDatalist();
       renderReportes();
     }
 
@@ -525,29 +620,23 @@
       document.querySelectorAll('.cur-month-badge').forEach(b => b.innerText = txt);
     }
 
-    // Navegación principal de pestañas (Corregida y Blindada)
     function switchTab(tabId, btnElement) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       
-      if(btnElement) {
-        btnElement.classList.add('active');
-      }
+      if(btnElement) btnElement.classList.add('active');
       
       const targetPanel = document.getElementById(`panel-${tabId}`);
-      if(targetPanel) {
-        targetPanel.classList.add('active');
-      }
+      if(targetPanel) targetPanel.classList.add('active');
       
-      // Refrescar vistas al cambiar de panel
       renderDashboard();
       renderInventario();
       renderQuickSaleGrid();
       renderVentasTabHistories();
+      renderClientes();
       renderReportes();
     }
 
-    // Navegación interna en Ventas & Gastos
     function switchSubTab(subTab) {
       document.getElementById('subtab-ventas-btn').className = "btn btn-sm " + (subTab === 'ventas' ? 'btn-success' : 'btn-muted');
       document.getElementById('subtab-gastos-btn').className = "btn btn-sm " + (subTab === 'gastos' ? 'btn-danger' : 'btn-muted');
@@ -558,7 +647,15 @@
       document.getElementById('sect-ingresos').style.display = subTab === 'ingresos' ? 'block' : 'none';
     }
 
-    // ─── DASHBOARD RENDERING ───
+    function updateCustomerDatalist() {
+      const list = document.getElementById('customers-list');
+      list.innerHTML = "";
+      state.customers.forEach(c => {
+        list.innerHTML += `<option value="${c.name}">`;
+      });
+    }
+
+    // ─── DASHBOARD ───
     function renderDashboard() {
       const month = getCurrentMonthKey();
       
@@ -582,7 +679,6 @@
       const efectivoCaja = todoVentas + todoOtros - todoGastos;
       const valorTotalNegocio = efectivoCaja + invConGanancia;
 
-      // Inyectar en el HTML
       document.getElementById('dash-efectivo').innerText = formatCurrency(efectivoCaja);
       document.getElementById('dash-inv-venta').innerText = formatCurrency(invConGanancia);
       document.getElementById('dash-valor-negocio').innerText = formatCurrency(valorTotalNegocio);
@@ -599,7 +695,6 @@
       document.getElementById('dash-prod-count').innerText = `${state.products.length} productos`;
       document.getElementById('dash-ganancia-potencial').innerText = formatCurrency(potencialGanancia);
 
-      // Top Productos vendidos
       const topProducts = [...state.products].map(p => {
         const sold = mSales.flatMap(s => s.items).filter(i => i.id === p.id).reduce((a, i) => a + i.qty, 0);
         return { ...p, sold };
@@ -622,7 +717,7 @@
       }
     }
 
-    // ─── INVENTARIO LOGIC ───
+    // ─── INVENTARIO ───
     function processImage(input) {
       const file = input.files[0];
       if (!file) return;
@@ -658,9 +753,9 @@
         return;
       }
 
-      if(id) { // Editar
+      if(id) {
         state.products = state.products.map(p => p.id === id ? { id, name, category, cost, price, stock, image: currentProductImageBase64 || p.image } : p);
-      } else { // Crear nuevo
+      } else {
         state.products.push({
           id: Date.now().toString(),
           name, category, cost, price, stock,
@@ -741,8 +836,7 @@
       });
     }
 
-
-    // ─── SECCIÓN: VENTAS (CARRITO Y SELECCIÓN RÁPIDA) ───
+    // ─── VENTAS Y CARRITO ───
     function renderQuickSaleGrid() {
       const search = document.getElementById('sale-search').value.toLowerCase();
       const grid = document.getElementById('quick-sale-products');
@@ -784,7 +878,7 @@
       const currentQty = cartItem ? cartItem.qty : 0;
 
       if(currentQty + 1 > p.stock) {
-        alert(`Operación Denegada: El stock disponible en bodega es de ${p.stock} unidades.`);
+        alert(`Operación Denegada: El stock disponible es de ${p.stock} unidades.`);
         return;
       }
 
@@ -805,7 +899,7 @@
 
       let targetQty = parseInt(val) || 1;
       if(targetQty > p.stock) {
-        alert(`Operación denegada: Solo hay ${p.stock} unidades de este artículo en inventario.`);
+        alert(`Operación denegada: Solo hay ${p.stock} unidades en inventario.`);
         targetQty = p.stock;
       }
 
@@ -858,21 +952,36 @@
       const month = getCurrentMonthKey();
       const total = cart.reduce((a, i) => a + (i.price * i.qty), 0);
       const costo = cart.reduce((a, i) => a + (i.cost * i.qty), 0);
+      
+      const customerName = document.getElementById('sale-customer-name').value.trim() || "Cliente General";
+      const customerPhone = document.getElementById('sale-customer-phone').value.trim() || "";
       const note = document.getElementById('sale-note').value.trim();
 
-      // Descontar stock real
+      // Guardar o actualizar cliente automáticamente en la base de datos interna
+      if(customerName !== "Cliente General") {
+        const existingCust = state.customers.find(c => c.name.toLowerCase() === customerName.toLowerCase());
+        if(!existingCust) {
+          state.customers.push({ name: customerName, phone: customerPhone });
+        } else if(customerPhone) {
+          existingCust.phone = customerPhone; // Actualizar teléfono si se aporta uno nuevo
+        }
+      }
+
+      // Descontar stock
       state.products.forEach(p => {
         const item = cart.find(c => c.id === p.id);
-        if(item) {
-          p.stock = Math.max(0, p.stock - item.qty);
-        }
+        if(item) p.stock = Math.max(0, p.stock - item.qty);
       });
 
-      // Registrar venta
+      const saleId = Date.now().toString();
+
+      // Registrar venta incluyendo datos del cliente
       state.sales.push({
-        id: Date.now().toString(),
+        id: saleId,
         month,
         date: new Date().toISOString(),
+        customerName,
+        customerPhone,
         items: cart,
         total,
         costo,
@@ -880,6 +989,8 @@
       });
 
       cart = [];
+      document.getElementById('sale-customer-name').value = "";
+      document.getElementById('sale-customer-phone').value = "";
       document.getElementById('sale-note').value = "";
       document.getElementById('sale-search').value = "";
       
@@ -887,10 +998,54 @@
       renderCart();
       renderQuickSaleGrid();
       renderVentasTabHistories();
+      updateCustomerDatalist();
+      
+      // Mostrar el ticket inmediatamente para satisfacción visual
+      openTicket(saleId);
     }
 
+    // ─── TICKET FACTURA MODAL LOGIC ───
+    function openTicket(saleId) {
+      const sale = state.sales.find(s => s.id === saleId);
+      if(!sale) return;
 
-    // ─── GASTOS Y OTROS INGRESOS LOGIC ───
+      const dateStr = new Date(sale.date).toLocaleString("es-CO");
+      
+      let infoHtml = `
+        <b>Ticket:</b> ${sale.id}<br>
+        <b>Fecha:</b> ${dateStr}<br>
+        <b>Cliente:</b> ${sale.customerName}<br>
+      `;
+      if(sale.customerPhone) infoHtml += `<b>Tel:</b> ${sale.customerPhone}<br>`;
+
+      let itemsHtml = "";
+      sale.items.forEach(i => {
+        itemsHtml += `
+          <div style="display:flex; justify-content:space-between;">
+            <span>${i.name} (x${i.qty})</span>
+            <span>${formatCurrency(i.price * i.qty)}</span>
+          </div>
+        `;
+      });
+
+      document.getElementById('ticket-info').innerHTML = infoHtml;
+      document.getElementById('ticket-items').innerHTML = itemsHtml;
+      document.getElementById('ticket-total-row').innerHTML = `<span>TOTAL NETO:</span> <span>${formatCurrency(sale.total)}</span>`;
+      
+      if(sale.note) {
+        document.getElementById('ticket-note-row').innerHTML = `Obs: ${sale.note}`;
+      } else {
+        document.getElementById('ticket-note-row').innerHTML = "";
+      }
+
+      document.getElementById('ticket-modal').style.display = "flex";
+    }
+
+    function closeTicket() {
+      document.getElementById('ticket-modal').style.display = "none";
+    }
+
+    // ─── GASTOS E INGRESOS ───
     function saveExpense() {
       const desc = document.getElementById('exp-desc').value.trim();
       const amt = parseFloat(document.getElementById('exp-amount').value) || 0;
@@ -937,13 +1092,11 @@
       renderVentasTabHistories();
     }
 
-    // Anulaciones / Eliminaciones
     function cancelSale(id) {
       if(!confirm("¿Anular esta venta? El stock volverá automáticamente al inventario.")) return;
       const sale = state.sales.find(s => s.id === id);
       if(!sale) return;
 
-      // Devolver stock
       state.products.forEach(p => {
         const item = sale.items.find(i => i.id === p.id);
         if(item) p.stock += item.qty;
@@ -969,7 +1122,6 @@
       renderVentasTabHistories();
     }
 
-    // Renderizado de historiales en la pestaña Ventas/Gastos
     function renderVentasTabHistories() {
       const month = getCurrentMonthKey();
 
@@ -981,14 +1133,16 @@
         tbodySales.innerHTML = `<tr><td colspan="5" style="color:var(--muted); padding:10px;">Sin ventas este mes.</td></tr>`;
       } else {
         [...mSales].reverse().forEach(s => {
-          const prodLine = s.items.map(i => `${i.name} x${i.qty}`).join(", ");
-          const noteLine = s.note ? `<div style="color:var(--secondary); font-size:11px; margin-top:2px;">📝 Observación: ${s.note}</div>` : '';
+          const prodLine = s.items.map(i => `${i.name} (x${i.qty})`).join(", ");
           tbodySales.innerHTML += `<tr>
             <td>${new Date(s.date).toLocaleDateString("es-CO")}</td>
-            <td>${prodLine} ${noteLine}</td>
+            <td style="font-weight:600; color:var(--dark);">${s.customerName || 'Cliente General'}</td>
+            <td style="font-size:13px; color:#555;">${prodLine}</td>
             <td style="text-align:right; font-weight:700; color:var(--primary);">${formatCurrency(s.total)}</td>
-            <td style="text-align:right; color:var(--success);">${formatCurrency(s.total - s.costo)}</td>
-            <td style="text-align:right;"><button class="btn btn-sm btn-danger" onclick="cancelSale('${s.id}')">Anular</button></td>
+            <td style="text-align:right; white-space:nowrap;">
+              <button class="btn btn-sm btn-info" onclick="openTicket('${s.id}')">🎫 Ver Ticket</button>
+              <button class="btn btn-sm btn-danger" onclick="cancelSale('${s.id}')">Anular</button>
+            </td>
           </tr>`;
         });
       }
@@ -1021,7 +1175,7 @@
         [...mIncomes].reverse().forEach(i => {
           tbodyIncomes.innerHTML += `<tr>
             <td>${new Date(i.date).toLocaleDateString("es-CO")}</td>
-            <td>${i.description}</td>
+            <td>i.description}</td>
             <td style="color:var(--muted);">${i.category}</td>
             <td style="text-align:right; font-weight:700; color:var(--success);">${formatCurrency(i.amount)}</td>
             <td style="text-align:right;"><button class="btn btn-sm btn-danger" onclick="deleteIncome('${i.id}')">✕</button></td>
@@ -1030,8 +1184,32 @@
       }
     }
 
+    // ─── PESTAÑA: DIRECTORIO DE CLIENTES ───
+    function renderClientes() {
+      const tbody = document.querySelector('#table-clientes tbody');
+      tbody.innerHTML = "";
 
-    // ─── PESTAÑA: REPORTES ───
+      if(state.customers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--muted);">No hay clientes registrados en el sistema todavía.</td></tr>`;
+        return;
+      }
+
+      state.customers.forEach(c => {
+        // Calcular cuántas compras y cuánto dinero total ha gastado este cliente específico
+        const cSales = state.sales.filter(s => s.customerName.toLowerCase() === c.name.toLowerCase());
+        const totalCompras = cSales.length;
+        const totalDinero = cSales.reduce((sum, s) => sum + s.total, 0);
+
+        tbody.innerHTML += `<tr>
+          <td style="font-weight:600;">${c.name}</td>
+          <td style="color:var(--muted);">${c.phone || '<i>Sin teléfono</i>'}</td>
+          <td style="text-align:right; font-weight:700; color:var(--info);">${totalCompras} compras</td>
+          <td style="text-align:right; font-weight:700; color:var(--success);">${formatCurrency(totalDinero)}</td>
+        </tr>`;
+      });
+    }
+
+    // ─── REPORTES ───
     function closeMonthReport() {
       const month = getCurrentMonthKey();
       const [year, m] = month.split("-");
@@ -1068,7 +1246,6 @@
         })).filter(p => p.sold > 0).sort((a,b) => b.sold - a.sold).slice(0, 5)
       };
 
-      // Si ya existía el mes, se actualiza
       const existingIdx = state.reports.findIndex(r => r.month === month);
       if(existingIdx >= 0) {
         state.reports[existingIdx] = report;
@@ -1078,7 +1255,7 @@
 
       saveState();
       renderReportes();
-      alert("Reporte mensual archivado y consolidado con éxito.");
+      alert("Reporte mensual archivado con éxito.");
     }
 
     function renderReportes() {
@@ -1150,7 +1327,6 @@
       });
     }
 
-    // Ejecutar inicialización al cargar la página
     window.onload = init;
   </script>
 </body>
