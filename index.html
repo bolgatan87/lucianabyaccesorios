@@ -1,1051 +1,923 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi Dulcería - Gestión de Negocio</title>
-  
-  <style>
-    /* Estilos globales y paleta de colores del negocio */
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #FFF8F0;
-      color: #2D2016;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      box-sizing: border-box;
-    }
-    *, *:before, *:after {
-      box-sizing: inherit;
-    }
+import { useState, useEffect } from "react";
 
-    /* Header y Navegación Sticky */
-    .header {
-      background: #E8603C;
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .header-title {
-      color: #FFFFFF;
-      font-weight: 800;
-      font-size: 18px;
-      letter-spacing: -0.5px;
-      margin: 0;
-    }
-    .header-sub {
-      color: rgba(255,255,255,0.75);
-      font-size: 12px;
-    }
+const COLORS = {
+  bg: "#FFF8F0",
+  card: "#FFFFFF",
+  primary: "#E8603C",
+  secondary: "#F5A623",
+  accent: "#6DBE45",
+  dark: "#2D2016",
+  muted: "#8B7355",
+  border: "#EDE0D0",
+  success: "#6DBE45",
+  danger: "#E84040",
+  info: "#4A90D9",
+};
 
-    .nav-bar {
-      background: #FFFFFF;
-      border-bottom: 1px solid #EDE0D0;
-      display: flex;
-      overflow-x: auto;
-      position: sticky;
-      top: 61px;
-      z-index: 99;
-    }
-    .nav-btn {
-      background: transparent;
-      border: none;
-      padding: 14px 16px;
-      font-weight: 500;
-      font-size: 14px;
-      color: #8B7355;
-      cursor: pointer;
-      border-bottom: 3px solid transparent;
-      white-space: nowrap;
-      flex: 1 0 auto;
-      transition: all 0.2s;
-    }
-    .nav-btn.active {
-      font-weight: 700;
-      color: #E8603C;
-      border-bottom-color: #E8603C;
-    }
+const INITIAL_STATE = {
+  products: [],
+  sales: [],
+  expenses: [],
+  incomes: [],
+  reports: [],
+};
 
-    /* Contenedores y Cuadrículas */
-    .container {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 24px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .grid-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px;
-    }
+function loadData() {
+  try {
+    const saved = localStorage.getItem("dulceria_data");
+    return saved ? JSON.parse(saved) : INITIAL_STATE;
+  } catch {
+    return INITIAL_STATE;
+  }
+}
 
-    /* Tarjetas (Cards) */
-    .card {
-      background: #FFFFFF;
-      border: 1px solid #EDE0D0;
-      border-radius: 16px;
-      padding: 22px 20px;
-      display: flex;
-      flex-direction: column;
-    }
-    .stat-label {
-      color: #8B7355;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .stat-value {
-      font-size: 26px;
-      font-weight: 800;
-      margin-top: 6px;
-    }
-    .stat-sub {
-      color: #8B7355;
-      font-size: 12px;
-      margin-top: 4px;
-    }
+function saveData(data) {
+  try {
+    localStorage.setItem("dulceria_data", JSON.stringify(data));
+  } catch {}
+}
 
-    /* Formularios y Controles */
-    .form-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: flex-end;
-    }
-    .input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      flex: 1 1 140px;
-    }
-    .input-group.wide {
-      flex: 2 1 200px;
-    }
-    .input-group.narrow {
-      flex: 0 0 90px;
-    }
-    .input-group label {
-      font-size: 12px;
-      font-weight: 600;
-      color: #8B7355;
-      text-transform: uppercase;
-    }
-    .input-field, .select-field {
-      border: 1.5px solid #EDE0D0;
-      border-radius: 10px;
-      padding: 9px 12px;
-      font-size: 14px;
-      color: #2D2016;
-      background: #FFF8F0;
-      outline: none;
-      width: 100%;
-    }
+function getCurrentMonthKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
-    /* Botones */
-    .btn {
-      background: #E8603C;
-      color: #FFFFFF;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 22px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .btn-secondary { background: #F5A623; }
-    .btn-info { background: #4A90D9; }
-    .btn-danger { background: #E84040; }
-    .btn-muted { background: #8B7355; }
-    .btn-small { padding: 6px 12px; font-size: 12px; }
-    .btn:disabled { background: #ccc; cursor: not-allowed; }
+function formatCurrency(n) {
+  // Asegura redondeo matemático estricto y elimina por completo cualquier decimal
+  return `$${Math.round(Number(n || 0)).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
 
-    /* Tablas Responsivas */
-    .table-wrapper {
-      overflow-x: auto;
-      border-radius: 16px;
-      border: 1px solid #EDE0D0;
-      background: #FFFFFF;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    th {
-      background: #FFF8F0;
-      color: #8B7355;
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 12px;
-      text-transform: uppercase;
-    }
-    td {
-      padding: 12px;
-      border-top: 1px solid #EDE0D0;
-      vertical-align: middle;
-    }
+function MonthBadge() {
+  const months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const d = new Date();
+  return (
+    <span style={{ background: COLORS.secondary, color: "#fff", borderRadius: 20, padding: "3px 14px", fontSize: 13, fontWeight: 700 }}>
+      {months[d.getMonth()]} {d.getFullYear()}
+    </span>
+  );
+}
 
-    /* Miniaturas de Imágenes */
-    .prod-thumbnail {
-      width: 42px;
-      height: 42px;
-      object-fit: cover;
-      border-radius: 8px;
-      border: 1px solid #EDE0D0;
-      background: #FFF8F0;
-      display: block;
-    }
-
-    /* Badges */
-    .badge-month {
-      background: #F5A623;
-      color: white;
-      border-radius: 20px;
-      padding: 3px 14px;
-      font-size: 13px;
-      font-weight: 700;
-      display: inline-block;
-      width: fit-content;
-    }
-    .badge-tab {
-      display: flex;
-      gap: 4px;
-      background: #EDE0D0;
-      border-radius: 12px;
-      padding: 4px;
-      width: fit-content;
-      flex-wrap: wrap;
-    }
-    .subtab-btn {
-      background: transparent;
-      border: none;
-      border-radius: 10px;
-      padding: 8px 24px;
-      font-weight: 700;
-      font-size: 14px;
-      color: #8B7355;
-      cursor: pointer;
-    }
-    .subtab-btn.active {
-      background: #E8603C;
-      color: white;
-    }
-
-    ::-webkit-scrollbar { height: 5px; width: 5px; }
-    ::-webkit-scrollbar-thumb { background: #EDE0D0; border-radius: 10px; }
-  </style>
-</head>
-<body>
-
-  <!-- Header -->
-  <div class="header">
-    <span style="font-size: 28px;">🍬</span>
-    <div>
-      <h1 class="header-title">Mi Dulcería</h1>
-      <div class="header-sub">Gestión de tu negocio</div>
+function StatCard({ label, value, color, sub }) {
+  return (
+    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "22px 20px", flex: 1, minWidth: 200 }}>
+      <div style={{ color: COLORS.muted, fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+      <div style={{ color: color || COLORS.dark, fontSize: 26, fontWeight: 800, marginTop: 6 }}>{value}</div>
+      {sub && <div style={{ color: COLORS.muted, fontSize: 12, marginTop: 4 }}>{sub}</div>}
     </div>
-  </div>
-
-  <!-- Barra de Navegación -->
-  <div class="nav-bar">
-    <button class="nav-btn active" id="btn-dashboard" onclick="actions.changeTab('dashboard')">🏠 Principal</button>
-    <button class="nav-btn" id="btn-inventario" onclick="actions.changeTab('inventario')">📦 Inventario</button>
-    <button class="nav-btn" id="btn-ventas" onclick="actions.changeTab('ventas')">💰 Ventas & Gastos</button>
-    <button class="nav-btn" id="btn-reportes" onclick="actions.changeTab('reportes')">📊 Reportes</button>
-  </div>
-
-  <!-- Contenedor Dinámico Principal -->
-  <div class="container" id="main-content"></div>
-
-  <script>
-    // ─── ESTADO GLOBAL DE LA APLICACIÓN ─────────────────────────────────────────
-    const INITIAL_STATE = {
-      products: [],
-      sales: [],
-      expenses: [],
-      incomes: [],
-      reports: []
-    };
-
-    let state = {
-      data: loadData(),
-      currentTab: 'dashboard',
-      ventasSubTab: 'ventas', 
-      searchQuery: '',
-      editProductId: null,
-      tempImageBase64: '', 
-      saleItems: [] 
-    };
-
-    function loadData() {
-      try {
-        const saved = localStorage.getItem("dulceria_data");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (!parsed.incomes) parsed.incomes = [];
-          return parsed;
-        }
-        return JSON.parse(JSON.stringify(INITIAL_STATE));
-      } catch (e) {
-        return JSON.parse(JSON.stringify(INITIAL_STATE));
-      }
-    }
-
-    function saveData() {
-      try {
-        localStorage.setItem("dulceria_data", JSON.stringify(state.data));
-      } catch (e) {}
-    }
-
-    // ─── UTILERÍAS ──────────────────────────────────────────────────────────────
-    function formatCurrency(n) {
-      // Forzamos redondeo matemático estricto para asegurar cero decimales
-      return '$' + Math.round(n || 0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-    }
-
-    function getCurrentMonthKey() {
-      const d = new Date();
-      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, "0");
-    }
-
-    function getMonthBadgeHTML() {
-      const months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-      const d = new Date();
-      return `<span class="badge-month">${months[d.getMonth()]} ${d.getFullYear()}</span>`;
-    }
-
-    // ─── CONTROLADORES DE ACCIÓN (ACTIONS) ──────────────────────────────────────
-    window.actions = {
-      changeTab: function(tabId) {
-        state.currentTab = tabId;
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`btn-${tabId}`).classList.add('active');
-        render();
-      },
-
-      changeSubTab: function(subTabId) {
-        state.ventasSubTab = subTabId;
-        render();
-      },
-
-      handleImageUpload: function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const img = new Image();
-          img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const MAX_SIZE = 150; 
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-              if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-            } else {
-              if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            state.tempImageBase64 = canvas.toDataURL('image/jpeg', 0.75);
-            
-            const previewContainer = document.getElementById('p-img-preview');
-            if (previewContainer) {
-              previewContainer.innerHTML = `<img src="${state.tempImageBase64}" class="prod-thumbnail">`;
-            }
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      },
-
-      saveProduct: function() {
-        const name = document.getElementById('p-name').value.trim();
-        const category = document.getElementById('p-category').value;
-        const cost = parseFloat(document.getElementById('p-cost').value) || 0;
-        const price = parseFloat(document.getElementById('p-price').value) || 0;
-        const stock = parseInt(document.getElementById('p-stock').value) || 0;
-        const image = state.tempImageBase64; 
-
-        if (!name || cost <= 0 || price <= 0) {
-          alert('Por favor, completa los campos requeridos con valores válidos.');
-          return;
-        }
-
-        if (state.editProductId) {
-          state.data.products = state.data.products.map(p => p.id === state.editProductId ? {
-            id: p.id, name, category, cost, price, stock, image
-          } : p);
-          state.editProductId = null;
-        } else {
-          state.data.products.push({
-            id: Date.now().toString(), name, category, cost, price, stock, image
-          });
-        }
-
-        state.tempImageBase64 = '';
-        saveData();
-        render();
-      },
-
-      editProduct: function(id) {
-        state.editProductId = id;
-        render();
-        const p = state.data.products.find(x => x.id === id);
-        if (p) {
-          document.getElementById('p-name').value = p.name;
-          document.getElementById('p-category').value = p.category;
-          document.getElementById('p-cost').value = p.cost;
-          document.getElementById('p-price').value = p.price;
-          document.getElementById('p-stock').value = p.stock;
-          state.tempImageBase64 = p.image || '';
-          
-          if (p.image) {
-            document.getElementById('p-img-preview').innerHTML = `<img src="${p.image}" class="prod-thumbnail">`;
-          }
-        }
-      },
-
-      cancelEdit: function() {
-        state.editProductId = null;
-        state.tempImageBase64 = '';
-        render();
-      },
-
-      deleteProduct: function(id) {
-        if (!confirm('¿Estás seguro de eliminar este producto del inventario?')) return;
-        state.data.products = state.data.products.filter(p => p.id !== id);
-        saveData();
-        render();
-      },
-
-      handleSearch: function(val) {
-        state.searchQuery = val.toLowerCase();
-        renderInventoryTable();
-      },
-
-      addSaleItem: function() {
-        const prodId = document.getElementById('vs-product').value;
-        const qty = parseInt(document.getElementById('vs-qty').value) || 1;
-        const prod = state.data.products.find(p => p.id === prodId);
-
-        if (!prod || qty < 1) return;
-        if (qty > prod.stock) {
-          alert(`No puedes vender más de las unidades disponibles en stock (${prod.stock}).`);
-          return;
-        }
-
-        const existing = state.saleItems.find(i => i.id === prod.id);
-        if (existing) {
-          if ((existing.qty + qty) > prod.stock) {
-            alert(`La cantidad total en el carrito supera el stock disponible (${prod.stock}).`);
-            return;
-          }
-          existing.qty += qty;
-        } else {
-          state.saleItems.push({ id: prod.id, name: prod.name, price: prod.price, cost: prod.cost, qty: qty });
-        }
-
-        renderVentasSeccion();
-      },
-
-      removeSaleItem: function(index) {
-        state.saleItems.splice(index, 1);
-        renderVentasSeccion();
-      },
-
-      processSale: function() {
-        if (state.saleItems.length === 0) return;
-
-        const total = state.saleItems.reduce((a, i) => a + (i.price * i.qty), 0);
-        const costo = state.saleItems.reduce((a, i) => a + (i.cost * i.qty), 0);
-        const note = document.getElementById('vs-note').value.trim();
-        const month = getCurrentMonthKey();
-
-        state.data.products = state.data.products.map(p => {
-          const item = state.saleItems.find(i => i.id === p.id);
-          return item ? { ...p, stock: Math.max(0, p.stock - item.qty) } : p;
-        });
-
-        state.data.sales.push({
-          id: Date.now().toString(),
-          month,
-          date: new Date().toISOString(),
-          items: state.saleItems,
-          total,
-          costo,
-          note
-        });
-
-        state.saleItems = [];
-        saveData();
-        render();
-      },
-
-      annulSale: function(id) {
-        if (!confirm('¿Anular esta venta? El stock regresará al inventario automáticamente.')) return;
-        const sale = state.data.sales.find(s => s.id === id);
-        if (!sale) return;
-
-        state.data.products = state.data.products.map(p => {
-          const item = sale.items.find(i => i.id === p.id);
-          return item ? { ...p, stock: p.stock + item.qty } : p;
-        });
-
-        state.data.sales = state.data.sales.filter(s => s.id !== id);
-        saveData();
-        render();
-      },
-
-      saveExpense: function() {
-        const desc = document.getElementById('exp-desc').value.trim();
-        const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
-        const category = document.getElementById('exp-cat').value || "General";
-
-        if (!desc || amount <= 0) {
-          alert('Ingresa una descripción y monto válido para el gasto.');
-          return;
-        }
-
-        state.data.expenses.push({
-          id: Date.now().toString(),
-          month: getCurrentMonthKey(),
-          date: new Date().toISOString(),
-          description: desc,
-          amount,
-          category
-        });
-
-        saveData();
-        render();
-      },
-
-      deleteExpense: function(id) {
-        if (!confirm('¿Eliminar de forma permanente este registro de gasto?')) return;
-        state.data.expenses = state.data.expenses.filter(e => e.id !== id);
-        saveData();
-        render();
-      },
-
-      saveIncome: function() {
-        const desc = document.getElementById('inc-desc').value.trim();
-        const amount = parseFloat(document.getElementById('inc-amount').value) || 0;
-        const category = document.getElementById('inc-cat').value || "General";
-
-        if (!desc || amount <= 0) {
-          alert('Ingresa una descripción y monto válido para el ingreso.');
-          return;
-        }
-
-        if (!state.data.incomes) state.data.incomes = [];
-        state.data.incomes.push({
-          id: Date.now().toString(),
-          month: getCurrentMonthKey(),
-          date: new Date().toISOString(),
-          description: desc,
-          amount,
-          category
-        });
-
-        saveData();
-        render();
-      },
-
-      deleteIncome: function(id) {
-        if (!confirm('¿Eliminar de forma permanente este registro de ingreso?')) return;
-        state.data.incomes = state.data.incomes.filter(i => i.id !== id);
-        saveData();
-        render();
-      },
-
-      closeMonthReport: function() {
-        const month = getCurrentMonthKey();
-        const monthsNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-        const d = new Date();
-        const monthName = `${monthsNames[d.getMonth()]} ${d.getFullYear()}`;
-
-        const monthSales = state.data.sales.filter(s => s.month === month);
-        const monthExpenses = state.data.expenses.filter(e => e.month === month);
-        const monthIncomes = (state.data.incomes || []).filter(i => i.month === month);
-
-        const totalVentas = monthSales.reduce((a, s) => a + s.total, 0);
-        const totalOtrosIngresos = monthIncomes.reduce((a, i) => a + i.amount, 0);
-        const ingresosTotales = totalVentas + totalOtrosIngresos;
-
-        const gastos = monthExpenses.reduce((a, e) => a + e.amount, 0);
-        const gananciaBruta = monthSales.reduce((a, s) => a + (s.total - s.costo), 0);
-        const invSinGanancia = state.data.products.reduce((a, p) => a + (p.cost * p.stock), 0);
-        const invConGanancia = state.data.products.reduce((a, p) => a + (p.price * p.stock), 0);
-
-        const report = {
-          id: Date.now().toString(),
-          month,
-          monthName,
-          closedAt: new Date().toISOString(),
-          ingresos: ingresosTotales,
-          gastos,
-          utilidad: ingresosTotales - gastos,
-          gananciaBruta,
-          invSinGanancia,
-          invConGanancia,
-          salesCount: monthSales.length,
-          topProducts: state.data.products.map(p => ({
-            name: p.name,
-            sold: monthSales.flatMap(s => s.items).filter(i => i.id === p.id).reduce((a, i) => a + i.qty, 0)
-          })).filter(p => p.sold > 0).sort((a,b) => b.sold - a.sold).slice(0, 5)
-        };
-
-        const idx = state.data.reports.findIndex(r => r.month === month);
-        if (idx !== -1) {
-          state.data.reports[idx] = report;
-        } else {
-          state.data.reports.push(report);
-        }
-
-        saveData();
-        render();
-        alert('Reporte mensual procesado y archivado correctamente.');
-      }
-    };
-
-    // ─── RENDERIZADO DE VISTAS (TEMPLATES) ──────────────────────────────────────
-    function render() {
-      const container = document.getElementById('main-content');
-      
-      if (state.currentTab === 'dashboard') {
-        const month = getCurrentMonthKey();
-        
-        // 1. Cálculos del mes actual
-        const monthSales = state.data.sales.filter(s => s.month === month);
-        const monthExpenses = state.data.expenses.filter(e => e.month === month);
-        const monthIncomes = (state.data.incomes || []).filter(i => i.month === month);
-
-        const totalVentas = monthSales.reduce((a, s) => a + s.total, 0);
-        const totalOtrosIngresos = monthIncomes.reduce((a, i) => a + i.amount, 0);
-        
-        const totalIngresos = totalVentas + totalOtrosIngresos;
-        const totalGastos = monthExpenses.reduce((a, e) => a + e.amount, 0);
-        const utilidad = totalIngresos - totalGastos;
-
-        // 2. Cálculos de inventario actual
-        const invCosto = state.data.products.reduce((a, p) => a + (p.cost * p.stock), 0);
-        const invVenta = state.data.products.reduce((a, p) => a + (p.price * p.stock), 0);
-        const gananciaPotencial = invVenta - invCosto;
-
-        // 3. CÁLCULO HISTÓRICO DE EFECTIVO (Flujo real en caja)
-        const todoVentas = state.data.sales.reduce((a, s) => a + s.total, 0);
-        const todoOtrosIngresos = (state.data.incomes || []).reduce((a, i) => a + i.amount, 0);
-        const todoGastos = state.data.expenses.reduce((a, e) => a + e.amount, 0);
-        
-        // Lo que el negocio debe tener físicamente guardado en caja
-        const efectivoEnCaja = todoVentas + todoOtrosIngresos - todoGastos;
-        
-        // Lo que tendría sumando efectivo acumulado + vendiendo toda la mercancía actual
-        const valorTotalNegocio = efectivoEnCaja + invVenta;
-
-        const topProducts = [...state.data.products].map(p => ({
-          name: p.name,
-          stock: p.stock,
-          sold: monthSales.flatMap(s => s.items).filter(i => i.id === p.id).reduce((a, i) => a + i.qty, 0)
-        })).sort((a, b) => b.sold - a.sold).slice(0, 5);
-
-        let topRows = topProducts.map(p => `
-          <tr>
-            <td style="font-weight: 600;">${p.name}</td>
-            <td style="text-align: right; color: #E8603C; font-weight: 700;">${p.sold}</td>
-            <td style="text-align: right; color: ${p.stock < 5 ? '#E84040' : '#8B7355'}">${p.stock}</td>
-          </tr>
-        `).join('');
-
-        container.innerHTML = `
-          <!-- SECCIÓN 1: CAJA Y CAPITAL TOTAL DEL NEGOCIO -->
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="margin: 0; font-size: 22px;">💰 Caja y Capital Total</h2>
-          </div>
-          <div class="grid-stats">
-            <div class="card" style="background: #FFFCEB; border: 1.5px solid #F5A623;">
-              <span class="stat-label" style="color: #B47000;">💵 DEBO TENER EN EFECTIVO</span>
-              <span class="stat-value" style="color: #2D2016;">${formatCurrency(efectivoEnCaja)}</span>
-              <span class="stat-sub">Flujo real acumulado en caja</span>
-            </div>
-            <div class="card">
-              <span class="stat-label">📦 Inventario (Precio Venta)</span>
-              <span class="stat-value" style="color: #4A90D9;">${formatCurrency(invVenta)}</span>
-              <span class="stat-sub">Si vendes todo lo que hay hoy</span>
-            </div>
-            <div class="card" style="background: #EBF7EB; border: 1.5px solid #6DBE45;">
-              <span class="stat-label" style="color: #2E6316;">🏪 VALOR TOTAL DEL NEGOCIO</span>
-              <span class="stat-value" style="color: #2E6316;">${formatCurrency(valorTotalNegocio)}</span>
-              <span class="stat-sub">Efectivo en caja + Venta de inventario</span>
-            </div>
-          </div>
-
-          <!-- SECCIÓN 2: DESEMPEÑO DEL MES ACTUAL -->
-          <hr style="border: 0; border-top: 1px dashed #EDE0D0; margin: 10px 0;">
-          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <h2 style="margin: 0; font-size: 22px;">🍬 Rendimiento del Mes</h2>
-            ${getMonthBadgeHTML()}
-          </div>
-          <div class="grid-stats">
-            <div class="card">
-              <span class="stat-label">Ingresos del Mes</span>
-              <span class="stat-value" style="color: #6DBE45;">${formatCurrency(totalIngresos)}</span>
-              <span class="stat-sub">Ventas: ${formatCurrency(totalVentas)} | Otros: ${formatCurrency(totalOtrosIngresos)}</span>
-            </div>
-            <div class="card"><span class="stat-label">Gastos del mes</span><span class="stat-value" style="color: #E84040;">${formatCurrency(totalGastos)}</span></div>
-            <div class="card"><span class="stat-label">Utilidad Neta del Mes</span><span class="stat-value" style="color: ${utilidad >= 0 ? '#6DBE45' : '#E84040'};">${formatCurrency(utilidad)}</span></div>
-          </div>
-          <div class="grid-stats">
-            <div class="card"><span class="stat-label">Inventario (a costo)</span><span class="stat-value" style="color: #8B7355;">${formatCurrency(invCosto)}</span><span class="stat-sub">${state.data.products.length} productos</span></div>
-            <div class="card"><span class="stat-label">Ganancia Potencial Restante</span><span class="stat-value" style="color: #E8603C;">${formatCurrency(gananciaPotencial)}</span></div>
-          </div>
-
-          <!-- SECCIÓN 3: TABLA TOP VENTAS -->
-          <div class="card">
-            <h3 style="margin: 0 0 14px 0; font-size: 16px;">🏆 Top productos vendidos este mes</h3>
-            ${topProducts.length === 0 || topProducts.every(p => p.sold === 0) ? `<p style="color: #8B7355; margin: 0;">Sin ventas registradas este mes.</p>` : `
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr><th>Producto</th><th style="text-align: right;">Vendidos</th><th style="text-align: right;">Stock Actual</th></tr>
-                  </thead>
-                  <tbody>${topRows}</tbody>
-                </table>
-              </div>
-            `}
-          </div>
-        `;
-      } 
-      
-      else if (state.currentTab === 'inventario') {
-        container.innerHTML = `
-          <h2 style="margin: 0;">📦 Inventario</h2>
-          <div class="card">
-            <h3 style="margin: 0 0 14px 0; font-size: 15px;" id="inv-form-title">${state.editProductId ? '✏️ Editar producto' : '➕ Agregar producto'}</h3>
-            <div class="form-row">
-              <div class="input-group wide"><label>Nombre del producto *</label><input type="text" id="p-name" class="input-field" placeholder="Ej: Chupeta Bombombum"></div>
-              <div class="input-group">
-                <label>Categoría</label>
-                <select id="p-category" class="select-field">
-                  <option value="Dulces">Dulces</option><option value="Snacks">Snacks</option><option value="Bebidas">Bebidas</option><option value="Cositas">Cositas</option><option value="Otro">Otro</option>
-                </select>
-              </div>
-              <div class="input-group narrow"><label>Costo ($) *</label><input type="number" id="p-cost" class="input-field" placeholder="0"></div>
-              <div class="input-group narrow"><label>Venta ($) *</label><input type="number" id="p-price" class="input-field" placeholder="0"></div>
-              <div class="input-group narrow"><label>Stock *</label><input type="number" id="p-stock" class="input-field" placeholder="0"></div>
-              <div class="input-group" style="flex: 1 1 170px;">
-                <label>Foto del producto</label>
-                <input type="file" id="p-image" class="input-field" accept="image/*" onchange="actions.handleImageUpload(event)" style="padding: 5px 8px;">
-              </div>
-              <div id="p-img-preview" style="display:flex; align-items:center; justify-content:center; width:44px; height:44px; border: 1px dashed #EDE0D0; border-radius:10px; background:#FFF8F0; margin-bottom:2px; font-size:18px;">📦</div>
-            </div>
-            <div style="margin-top: 14px; display: flex; gap: 10px;">
-              <button class="btn" onclick="actions.saveProduct()">${state.editProductId ? 'Guardar Cambios' : 'Agregar Producto'}</button>
-              ${state.editProductId ? `<button class="btn btn-muted" onclick="actions.cancelEdit()">Cancelar</button>` : ''}
-            </div>
-          </div>
-          <div class="input-group"><label>Buscar Producto</label><input type="text" class="input-field" placeholder="Filtrar por nombre o categoría..." oninput="actions.handleSearch(this.value)"></div>
-          <div id="inventory-table-container"></div>
-        `;
-        renderInventoryTable();
-      } 
-      
-      else if (state.currentTab === 'ventas') {
-        container.innerHTML = `
-          <div class="badge-tab">
-            <button class="subtab-btn ${state.ventasSubTab === 'ventas' ? 'active' : ''}" onclick="actions.changeSubTab('ventas')">💰 Ventas</button>
-            <button class="subtab-btn ${state.ventasSubTab === 'gastos' ? 'active' : ''}" onclick="actions.changeSubTab('gastos')">💸 Gastos</button>
-            <button class="subtab-btn ${state.ventasSubTab === 'ingresos' ? 'active' : ''}" onclick="actions.changeSubTab('ingresos')">📈 Otros Ingresos</button>
-          </div>
-          <div id="ventas-seccion-dinamica"></div>
-        `;
-        renderVentasSeccion();
-      } 
-      
-      else if (state.currentTab === 'reportes') {
-        const month = getCurrentMonthKey();
-        const hasCurrentReport = state.data.reports.some(r => r.month === month);
-
-        let reportsHTML = state.data.reports.length === 0 ? `
-          <div class="card" style="text-align: center; color: #8B7355; padding: 30px;">
-            <p style="font-size: 18px; margin: 0 0 8px 0;">📁 Sin reportes guardados</p>
-            <p style="margin: 0;">Presiona el botón superior para archivar el rendimiento de este periodo.</p>
-          </div>
-        ` : [...state.data.reports].reverse().map(r => `
-          <div class="card" style="border: 2px solid ${r.month === month ? '#F5A623' : '#EDE0D0'}; gap: 14px; margin-bottom: 5px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-              <h3 style="margin: 0; font-size: 17px;">📅 ${r.monthName} ${r.month === month ? '<span class="badge-month" style="font-size:11px; padding:2px 8px;">Mes Actual</span>' : ''}</h3>
-              <span style="font-size: 12px; color: #8B7355;">Guardado el: ${new Date(r.closedAt).toLocaleDateString("es-CO")}</span>
-            </div>
-            <div class="grid-stats">
-              <div class="card" style="padding:12px;"><span class="stat-label">Ingresos Totales</span><span class="stat-value" style="color:#6DBE45; font-size:20px;">${formatCurrency(r.ingresos)}</span></div>
-              <div class="card" style="padding:12px;"><span class="stat-label">Gastos</span><span class="stat-value" style="color:#E84040; font-size:20px;">${formatCurrency(r.gastos)}</span></div>
-              <div class="card" style="padding:12px;"><span class="stat-label">Utilidad Neta</span><span class="stat-value" style="color:${r.utilidad >= 0 ? '#6DBE45' : '#E84040'}; font-size:20px;">${formatCurrency(r.utilidad)}</span></div>
-              <div class="card" style="padding:12px;"><span class="stat-label">Ganancia Bruta (Ventas)</span><span class="stat-value" style="color:#E8603C; font-size:20px;">${formatCurrency(r.gananciaBruta)}</span></div>
-            </div>
-            <div class="grid-stats">
-              <div class="card" style="padding:12px;"><span class="stat-label">Inv. a Costo</span><span class="stat-value" style="color:#4A90D9; font-size:18px;">${formatCurrency(r.invSinGanancia)}</span><span class="stat-sub">${r.salesCount} ventas realizadas</span></div>
-              <div class="card" style="padding:12px;"><span class="stat-label">Inv. a Venta</span><span class="stat-value" style="color:#F5A623; font-size:18px;">${formatCurrency(r.invConGanancia)}</span></div>
-            </div>
-            ${r.topProducts && r.topProducts.length > 0 ? `
-              <div>
-                <div style="font-weight:700; font-size:13px; margin-bottom:6px;">🏆 Los 5 Más Vendidos:</div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                  ${r.topProducts.map(tp => `<span style="background:#FFF8F0; border:1px solid #EDE0D0; padding:4px 12px; border-radius:20px; font-size:13px;">${tp.name} (${tp.sold})</span>`).join('')}
-                </div>
-              </div>
-            ` : ''}
-          </div>
-        `).join('');
-
-        container.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
-            <h2 style="margin: 0;">📊 Reportes Históricos</h2>
-            <button class="btn btn-secondary" onclick="actions.closeMonthReport()">${hasCurrentReport ? '🔄 Actualizar Cierre de Mes' : '📋 Guardar Cierre de Mes'}</button>
-          </div>
-          ${reportsHTML}
-        `;
-      }
-    }
-
-    // Renderizado específico de subcomponentes dinámicos
-    function renderInventoryTable() {
-      const container = document.getElementById('inventory-table-container');
-      if (!container) return;
-
-      const filtered = state.data.products.filter(p => 
-        p.name.toLowerCase().includes(state.searchQuery) || 
-        p.category.toLowerCase().includes(state.searchQuery)
-      );
-
-      if (filtered.length === 0) {
-        container.innerHTML = `<div class="table-wrapper" style="padding: 20px; color: #8B7355;">No se encontraron productos coincidentes.</div>`;
-        return;
-      }
-
-      let rows = filtered.map(p => {
-        const margin = p.cost > 0 ? (((p.price - p.cost) / p.cost) * 100).toFixed(0) : 0;
-        const imgHtml = p.image ? `<img src="${p.image}" class="prod-thumbnail" style="margin:0 auto;">` : `<span style="font-size:22px; display:block; text-align:center;">📦</span>`;
-        
-        return `
-          <tr>
-            <td style="width:60px;">${imgHtml}</td>
-            <td style="font-weight: 600;">${p.name}</td>
-            <td style="color: #8B7355;">${p.category}</td>
-            <td>${formatCurrency(p.cost)}</td>
-            <td style="color: #E8603C; font-weight: 700;">${formatCurrency(p.price)}</td>
-            <td style="font-weight: ${p.stock < 5 ? '700' : '400'}; color: ${p.stock < 5 ? '#E84040' : 'inherit'};">${p.stock}</td>
-            <td style="color: #6DBE45; font-weight: 700;">${margin}%</td>
-            <td>
-              <div style="display: flex; gap: 6px;">
-                <button class="btn btn-info btn-small" onclick="actions.editProduct('${p.id}')">Editar</button>
-                <button class="btn btn-danger btn-small" onclick="actions.deleteProduct('${p.id}')">X</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      container.innerHTML = `
-        <div class="table-wrapper">
-          <table>
+  );
+}
+
+function Input({ label, type = "text", value, onChange, placeholder, style }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, ...style }}>
+      {label && <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</label>}
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{ border: `1.5px solid ${COLORS.border}`, borderRadius: 10, padding: "9px 12px", fontSize: 14, color: COLORS.dark, background: COLORS.bg, outline: "none" }}
+      />
+    </div>
+  );
+}
+
+function Btn({ children, onClick, color, small, disabled }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: disabled ? "#ccc" : (color || COLORS.primary),
+        color: "#fff", border: "none", borderRadius: 10,
+        padding: small ? "7px 14px" : "10px 22px",
+        fontSize: small ? 13 : 14, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+function Dashboard({ data }) {
+  const month = getCurrentMonthKey();
+
+  const monthSales = data.sales.filter(s => s.month === month);
+  const monthExpenses = data.expenses.filter(e => e.month === month);
+  const monthIncomes = (data.incomes || []).filter(i => i.month === month);
+
+  const totalVentas = monthSales.reduce((a, s) => a + s.total, 0);
+  const totalOtrosIngresos = monthIncomes.reduce((a, i) => a + i.amount, 0);
+  const totalIngresos = totalVentas + totalOtrosIngresos;
+  
+  const totalGastos = monthExpenses.reduce((a, e) => a + e.amount, 0);
+  const utilidad = totalIngresos - totalGastos;
+
+  const invSinGanancia = data.products.reduce((a, p) => a + p.cost * p.stock, 0);
+  const invConGanancia = data.products.reduce((a, p) => a + p.price * p.stock, 0);
+  const potencialGanancia = invConGanancia - invSinGanancia;
+
+  // Flujos de efectivo históricos totales para la caja real
+  const todoVentas = data.sales.reduce((a, s) => a + s.total, 0);
+  const todoOtrosIngresos = (data.incomes || []).reduce((a, i) => a + i.amount, 0);
+  const todoGastos = data.expenses.reduce((a, e) => a + e.amount, 0);
+  
+  const efectivoEnCaja = todoVentas + todoOtrosIngresos - todoGastos;
+  const valorTotalNegocio = efectivoEnCaja + invConGanancia;
+
+  const topProducts = [...data.products]
+    .map(p => ({
+      ...p,
+      sold: monthSales.flatMap(s => s.items).filter(i => i.id === p.id).reduce((a, i) => a + i.qty, 0),
+    }))
+    .sort((a, b) => b.sold - a.sold)
+    .slice(0, 5);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <h2 style={{ margin: 0, color: COLORS.dark, fontSize: 22 }}>💰 Caja y Capital Total</h2>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <StatCard label="💵 Debo tener en efectivo" value={formatCurrency(efectivoEnCaja)} color={COLORS.dark} sub="Flujo real acumulado en caja" />
+        <StatCard label="📦 Inventario (Precio venta)" value={formatCurrency(invConGanancia)} color={COLORS.info} sub="Valor comercial actual" />
+        <StatCard label="🏪 Valor Total del Negocio" value={formatCurrency(valorTotalNegocio)} color={COLORS.accent} sub="Efectivo en caja + Venta de inventario" />
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 10 }}>
+        <h2 style={{ margin: 0, color: COLORS.dark, fontSize: 22 }}>🍬 Resumen del Mes</h2>
+        <MonthBadge />
+      </div>
+
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <StatCard label="Ingresos del mes" value={formatCurrency(totalIngresos)} color={COLORS.success} sub={`Ventas: ${formatCurrency(totalVentas)}`} />
+        <StatCard label="Gastos del mes" value={formatCurrency(totalGastos)} color={COLORS.danger} />
+        <StatCard label="Utilidad neta" value={formatCurrency(utilidad)} color={utilidad >= 0 ? COLORS.success : COLORS.danger} />
+      </div>
+
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <StatCard label="Inventario (a costo)" value={formatCurrency(invSinGanancia)} color={COLORS.muted} sub={`${data.products.length} productos`} />
+        <StatCard label="Ganancia potencial restante" value={formatCurrency(potencialGanancia)} color={COLORS.primary} />
+      </div>
+
+      <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+        <h3 style={{ margin: "0 0 14px", color: COLORS.dark, fontSize: 16 }}>🏆 Top productos vendidos este mes</h3>
+        {topProducts.length === 0 || topProducts.every(p => p.sold === 0) ? (
+          <p style={{ color: COLORS.muted, margin: 0 }}>Sin ventas registradas aún.</p>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
-              <tr><th>Foto</th><th>Producto</th><th>Categoría</th><th>Costo</th><th>Precio Venta</th><th>Stock</th><th>Margen</th><th>Acciones</th></tr>
+              <tr style={{ color: COLORS.muted, borderBottom: `1px solid ${COLORS.border}` }}>
+                <th style={{ textAlign: "left", padding: "6px 0", fontWeight: 600 }}>Producto</th>
+                <th style={{ textAlign: "right", fontWeight: 600 }}>Vendidos</th>
+                <th style={{ textAlign: "right", fontWeight: 600 }}>Stock</th>
+              </tr>
             </thead>
-            <tbody>${rows}</tbody>
+            <tbody>
+              {topProducts.map(p => (
+                <tr key={p.id} style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                  <td style={{ padding: "8px 0", color: COLORS.dark }}>{p.name}</td>
+                  <td style={{ textAlign: "right", color: COLORS.primary, fontWeight: 700 }}>{p.sold}</td>
+                  <td style={{ textAlign: "right", color: p.stock < 5 ? COLORS.danger : COLORS.muted }}>{p.stock}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── INVENTARIO ──────────────────────────────────────────────────────────────
+function Inventario({ data, setData }) {
+  const [form, setForm] = useState({ name: "", category: "", cost: "", price: "", stock: "", image: "" });
+  const [editId, setEditId] = useState(null);
+  const [search, setSearch] = useState("");
+
+  const categories = ["Dulces", "Snacks", "Bebidas", "Cositas", "Otro"];
+
+  function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement("canvas");
+        const MAX_SIZE = 120; // Redimensionamos para optimizar espacio en localStorage
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+        } else {
+          if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const base64 = canvas.toDataURL("image/jpeg", 0.75);
+        setForm(f => ({ ...f, image: base64 }));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleSave() {
+    if (!form.name || !form.cost || !form.price || !form.stock) return;
+    const product = {
+      id: editId || Date.now().toString(),
+      name: form.name,
+      category: form.category || "Otro",
+      cost: parseFloat(form.cost),
+      price: parseFloat(form.price),
+      stock: parseInt(form.stock),
+      image: form.image || ""
+    };
+    let products;
+    if (editId) {
+      products = data.products.map(p => p.id === editId ? product : p);
+    } else {
+      products = [...data.products, product];
+    }
+    const newData = { ...data, products };
+    setData(newData);
+    saveData(newData);
+    setForm({ name: "", category: "", cost: "", price: "", stock: "", image: "" });
+    setEditId(null);
+    // Limpiar input file de forma rudimentaria
+    const fileInput = document.getElementById("file-picker");
+    if (fileInput) fileInput.value = "";
+  }
+
+  function handleEdit(p) {
+    setForm({ name: p.name, category: p.category, cost: p.cost, price: p.price, stock: p.stock, image: p.image || "" });
+    setEditId(p.id);
+  }
+
+  function handleDelete(id) {
+    if (!confirm("¿Seguro que deseas eliminar este producto?")) return;
+    const products = data.products.filter(p => p.id !== id);
+    const newData = { ...data, products };
+    setData(newData);
+    saveData(newData);
+  }
+
+  const filtered = data.products.filter(p =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    p.category.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <h2 style={{ margin: 0, color: COLORS.dark }}>📦 Inventario</h2>
+
+      <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+        <h3 style={{ margin: "0 0 14px", color: COLORS.dark, fontSize: 15 }}>{editId ? "✏️ Editar producto" : "➕ Agregar producto"}</h3>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end" }}>
+          <Input label="Nombre" value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="Ej: Chupeta de fresa" style={{ flex: "1 1 180px" }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 130px" }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.muted, textTransform: "uppercase" }}>Categoría</label>
+            <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+              style={{ border: `1.5px solid ${COLORS.border}`, borderRadius: 10, padding: "9px 12px", fontSize: 14, background: COLORS.bg, color: COLORS.dark, outline: "none" }}>
+              <option value="">Seleccionar...</option>
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <Input label="Costo ($)" type="number" value={form.cost} onChange={v => setForm(f => ({ ...f, cost: v }))} placeholder="0" style={{ flex: "1 1 110px" }} />
+          <Input label="Precio venta ($)" type="number" value={form.price} onChange={v => setForm(f => ({ ...f, price: v }))} placeholder="0" style={{ flex: "1 1 110px" }} />
+          <Input label="Stock" type="number" value={form.stock} onChange={v => setForm(f => ({ ...f, stock: v }))} placeholder="0" style={{ flex: "1 1 80px" }} />
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 160px" }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.muted, textTransform: "uppercase" }}>Foto del producto</label>
+            <input id="file-picker" type="file" accept="image/*" onChange={handleImageUpload} style={{ border: `1.5px solid ${COLORS.border}`, borderRadius: 10, padding: "7px 10px", fontSize: 13, background: COLORS.bg }} />
+          </div>
+
+          <div style={{ width: 42, height: 42, border: `1px dashed ${COLORS.border}`, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.bg, overflow: "hidden" }}>
+            {form.image ? <img src={form.image} alt="Miniatura" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🍬"}
+          </div>
         </div>
-      `;
+        <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+          <Btn onClick={handleSave}>{editId ? "Guardar cambios" : "Agregar producto"}</Btn>
+          {editId && <Btn onClick={() => { setEditId(null); setForm({ name: "", category: "", cost: "", price: "", stock: "", image: "" }); }} color={COLORS.muted}>Cancelar</Btn>}
+        </div>
+      </div>
+
+      <Input label="Buscar producto" value={search} onChange={setSearch} placeholder="Nombre o categoría..." />
+
+      <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, overflow: "hidden" }}>
+        {filtered.length === 0 ? (
+          <p style={{ padding: 20, color: COLORS.muted, margin: 0 }}>Sin productos. ¡Agrega tu primer producto! 🍭</p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+              <thead style={{ background: COLORS.bg }}>
+                <tr style={{ color: COLORS.muted }}>
+                  {["Foto", "Producto", "Categoría", "Costo", "Precio", "Stock", "Margen", "Acciones"].map(h => (
+                    <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 12, textTransform: "uppercase" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(p => {
+                  const margin = p.cost > 0 ? (((p.price - p.cost) / p.cost) * 100).toFixed(0) : 0;
+                  return (
+                    <tr key={p.id} style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                      <td style={{ padding: "10px 12px" }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 6, background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: `1px solid ${COLORS.border}` }}>
+                          {p.image ? <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🍬"}
+                        </div>
+                      </td>
+                      <td style={{ padding: "10px 12px", fontWeight: 600, color: COLORS.dark }}>{p.name}</td>
+                      <td style={{ padding: "10px 12px", color: COLORS.muted }}>{p.category}</td>
+                      <td style={{ padding: "10px 12px" }}>{formatCurrency(p.cost)}</td>
+                      <td style={{ padding: "10px 12px", color: COLORS.primary, fontWeight: 700 }}>{formatCurrency(p.price)}</td>
+                      <td style={{ padding: "10px 12px", color: p.stock < 5 ? COLORS.danger : COLORS.dark, fontWeight: p.stock < 5 ? 700 : 400 }}>{p.stock}</td>
+                      <td style={{ padding: "10px 12px", color: COLORS.success, fontWeight: 700 }}>{margin}%</td>
+                      <td style={{ padding: "10px 12px" }}>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <Btn small onClick={() => handleEdit(p)} color={COLORS.info}>Editar</Btn>
+                          <Btn small onClick={() => handleDelete(p.id)} color={COLORS.danger}>Eliminar</Btn>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── VENTAS & GASTOS ─────────────────────────────────────────────────────────
+function VentasGastos({ data, setData }) {
+  const [tab, setTab] = useState("ventas");
+  const [saleItems, setSaleItems] = useState([]);
+  const [note, setNote] = useState("");
+  const [prodSearch, setProdSearch] = useState(""); // Buscador interno para el catálogo de ventas
+
+  const [expDesc, setExpDesc] = useState("");
+  const [expAmt, setExpAmt] = useState("");
+  const [expCat, setExpCat] = useState("");
+
+  const [incDesc, setIncDesc] = useState("");
+  const [incAmt, setIncAmt] = useState("");
+  const [incCat, setIncCat] = useState("");
+
+  const month = getCurrentMonthKey();
+  const monthSales = data.sales.filter(s => s.month === month);
+  const monthExpenses = data.expenses.filter(e => e.month === month);
+  const monthIncomes = (data.incomes || []).filter(i => i.month === month);
+
+  // Función rápida para el catálogo visual (+1 por clic)
+  function quickAddProduct(p) {
+    const cartItem = saleItems.find(item => item.id === p.id);
+    const currentQty = cartItem ? cartItem.qty : 0;
+
+    if (currentQty + 1 > p.stock) {
+      alert(`No puedes agregar más unidades. El stock disponible en bodega es de ${p.stock} unidades.`);
+      return;
     }
 
-    function renderVentasSeccion() {
-      const container = document.getElementById('ventas-seccion-dinamica');
-      if (!container) return;
+    if (cartItem) {
+      setSaleItems(saleItems.map(item => item.id === p.id ? { ...item, qty: item.qty + 1 } : item));
+    } else {
+      setSaleItems([...saleItems, { id: p.id, name: p.name, price: p.price, cost: p.cost, qty: 1 }]);
+    }
+  }
 
-      const month = getCurrentMonthKey();
+  function registerSale() {
+    if (saleItems.length === 0) return;
+    const total = saleItems.reduce((a, i) => a + i.price * i.qty, 0);
+    const costo = saleItems.reduce((a, i) => a + i.cost * i.qty, 0);
+    const sale = { id: Date.now().toString(), month, date: new Date().toISOString(), items: saleItems, total, costo, note };
+    
+    // Descontar stock real en el estado maestro
+    const products = data.products.map(p => {
+      const item = saleItems.find(i => i.id === p.id);
+      return item ? { ...p, stock: Math.max(0, p.stock - item.qty) } : p;
+    });
+    const newData = { ...data, sales: [...data.sales, sale], products };
+    setData(newData);
+    saveData(newData);
+    setSaleItems([]);
+    setNote("");
+    setProdSearch("");
+  }
 
-      if (state.ventasSubTab === 'ventas') {
-        const availableProducts = state.data.products.filter(p => p.stock > 0);
-        const monthSales = state.data.sales.filter(s => s.month === month);
-        const currentSaleTotal = state.saleItems.reduce((a, i) => a + (i.price * i.qty), 0);
+  function registerExpense() {
+    if (!expDesc || !expAmt) return;
+    const expense = { id: Date.now().toString(), month, date: new Date().toISOString(), description: expDesc, amount: parseFloat(expAmt), category: expCat || "General" };
+    const newData = { ...data, expenses: [...data.expenses, expense] };
+    setData(newData);
+    saveData(newData);
+    setExpDesc(""); setExpAmt(""); setExpCat("");
+  }
 
-        let options = availableProducts.map(p => `<option value="${p.id}">${p.name} (Disp: ${p.stock}) — ${formatCurrency(p.price)}</option>`).join('');
-        
-        let basketRows = state.saleItems.map((item, index) => {
-          const originalProd = state.data.products.find(p => p.id === item.id);
-          const imgHtml = originalProd && originalProd.image ? `<img src="${originalProd.image}" class="prod-thumbnail" style="width:30px; height:30px; display:inline-block; vertical-align:middle; margin-right:8px;">` : `<span style="font-size:16px; margin-right:8px; vertical-align:middle;">📦</span>`;
-          
-          return `
-            <tr>
-              <td>${imgHtml} <span style="vertical-align:middle;">${item.name}</span></td>
-              <td style="text-align: right; vertical-align:middle;">${item.qty}</td>
-              <td style="text-align: right; font-weight: 700; vertical-align:middle;">${formatCurrency(item.price * item.qty)}</td>
-              <td style="text-align: right; vertical-align:middle;"><button class="btn btn-danger btn-small" onclick="actions.removeSaleItem(${index})">✕</button></td>
-            </tr>
-          `;
-        }).join('');
+  function registerIncome() {
+    if (!incDesc || !incAmt) return;
+    const income = { id: Date.now().toString(), month, date: new Date().toISOString(), description: incDesc, amount: parseFloat(incAmt), category: incCat || "General" };
+    const incomesArray = data.incomes || [];
+    const newData = { ...data, incomes: [...incomesArray, income] };
+    setData(newData);
+    saveData(newData);
+    setIncDesc(""); setIncAmt(""); setIncCat("");
+  }
 
-        let salesHistoryRows = [...monthSales].reverse().map(s => `
-          <tr>
-            <td style="color: #8B7355;">${new Date(s.date).toLocaleDateString("es-CO")}</td>
-            <td><span style="font-size:12px; color:#2D2016;">${s.items.map(i => `${i.name} x${i.qty}`).join(', ')}</span>${s.note ? `<br><small style="color:#F5A623;">📝 ${s.note}</small>` : ''}</td>
-            <td style="text-align: right; font-weight: 700; color: #E8603C;">${formatCurrency(s.total)}</td>
-            <td style="text-align: right; color: #6DBE45;">${formatCurrency(s.total - s.costo)}</td>
-            <td style="text-align: right;"><button class="btn btn-danger btn-small" onclick="actions.annulSale('${s.id}')">Anular</button></td>
-          </tr>
-        `).join('');
+  function deleteSale(id) {
+    if (!confirm("¿Anular esta venta? El stock volverá automáticamente al inventario.")) return;
+    const sale = data.sales.find(s => s.id === id);
+    if (!sale) return;
+    const products = data.products.map(p => {
+      const item = sale.items.find(i => i.id === p.id);
+      return item ? { ...p, stock: p.stock + item.qty } : p;
+    });
+    const newData = { ...data, sales: data.sales.filter(s => s.id !== id), products };
+    setData(newData);
+    saveData(newData);
+  }
 
-        container.innerHTML = `
-          <div class="card">
-            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Nueva Venta</h3>
-            <div class="form-row">
-              <div class="input-group wide">
-                <label>Seleccionar Producto</label>
-                <select id="vs-product" class="select-field">
-                  <option value="">Selecciona un dulce o snack...</option>
-                  ${options}
-                </select>
-              </div>
-              <div class="input-group narrow"><label>Cant.</label><input type="number" id="vs-qty" class="input-field" value="1" min="1"></div>
-              <button class="btn" onclick="actions.addSaleItem()">Agregar al Carrito</button>
+  function deleteExpense(id) {
+    if (!confirm("¿Eliminar registro de gasto?")) return;
+    const newData = { ...data, expenses: data.expenses.filter(e => e.id !== id) };
+    setData(newData);
+    saveData(newData);
+  }
+
+  function deleteIncome(id) {
+    if (!confirm("¿Eliminar registro de otro ingreso?")) return;
+    const newData = { ...data, incomes: data.incomes.filter(i => i.id !== id) };
+    setData(newData);
+    saveData(newData);
+  }
+
+  const saleTotal = saleItems.reduce((a, i) => a + i.price * i.qty, 0);
+  const expCategories = ["Arriendo", "Servicios", "Transporte", "Compras", "Proveedor", "General"];
+  const incCategories = ["General", "Inyección Capital", "Servicios", "Otros"];
+
+  // Filtrar catálogo de productos activos para la venta basándose en el buscador
+  const availableProducts = data.products.filter(p =>
+    p.stock > 0 && p.name.toLowerCase().includes(prodSearch.toLowerCase())
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", gap: 0, background: COLORS.border, borderRadius: 12, padding: 4, width: "fit-content" }}>
+        {["ventas", "gastos", "ingresos"].map(t => (
+          <button key={t} onClick={() => setTab(t)} style={{
+            background: tab === t ? COLORS.primary : "transparent", color: tab === t ? "#fff" : COLORS.muted,
+            border: "none", borderRadius: 10, padding: "8px 24px", fontWeight: 700, cursor: "pointer", fontSize: 14, transition: "all .2s"
+          }}>
+            {t === "ventas" ? "💰 Ventas" : t === "gastos" ? "💸 Gastos" : "📈 Otros Ingresos"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "ventas" ? (
+        <>
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+            <h3 style={{ margin: "0 0 12px", color: COLORS.dark, fontSize: 15 }}>Nueva venta</h3>
+            
+            {/* Input Buscador Estilo POS */}
+            <div style={{ marginBottom: 14 }}>
+              <Input 
+                label="🔍 Buscar Producto Para Vender" 
+                value={prodSearch} 
+                onChange={setProdSearch} 
+                placeholder="Escribe el nombre del dulce o snack..." 
+              />
             </div>
 
-            ${state.saleItems.length > 0 ? `
-              <div style="margin-top: 20px;">
-                <div class="table-wrapper">
-                  <table>
-                    <thead><tr><th>Producto</th><th style="text-align: right;">Cant.</th><th style="text-align: right;">Subtotal</th><th></th></tr></thead>
-                    <tbody>${basketRows}</tbody>
-                  </table>
-                </div>
-                <div style="margin-top: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-                  <span style="font-size: 20px; font-weight: 800; color: #6DBE45;">Total: ${formatCurrency(currentSaleTotal)}</span>
-                  <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                    <input type="text" id="vs-note" class="input-field" placeholder="Nota u observación" style="max-width: 180px;">
-                    <button class="btn btn-info" onclick="actions.processSale()">Registrar Venta ✓</button>
+            {/* Catálogo Visual con Scroll Desplazable */}
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", 
+              gap: 10, 
+              maxHeight: 280, 
+              overflowY: "auto", 
+              padding: "6px", 
+              background: COLORS.bg, 
+              borderRadius: 12,
+              marginBottom: 16
+            }}>
+              {availableProducts.length === 0 ? (
+                <p style={{ color: COLORS.muted, padding: 16, margin: 0, gridColumn: "1 / -1", textAlign: "center" }}>
+                  No se encontraron dulces en stock con ese nombre.
+                </p>
+              ) : (
+                availableProducts.map(p => {
+                  const cartItem = saleItems.find(item => item.id === p.id);
+                  const currentCartQty = cartItem ? cartItem.qty : 0;
+                  const currentStockLeft = p.stock - currentCartQty;
+
+                  return (
+                    <div 
+                      key={p.id} 
+                      style={{ 
+                        background: COLORS.card, 
+                        border: `1px solid ${COLORS.border}`, 
+                        borderRadius: 12, 
+                        padding: 10, 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 10,
+                        opacity: currentStockLeft <= 0 ? 0.55 : 1,
+                        transition: "transform 0.1s"
+                      }}
+                    >
+                      <div style={{ width: 44, height: 44, borderRadius: 8, background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: `1px solid ${COLORS.border}`, flexShrink: 0 }}>
+                        {p.image ? <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🍬"}
+                      </div>
+                      
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: COLORS.dark, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                        <div style={{ fontSize: 11, color: currentStockLeft < 5 ? COLORS.danger : COLORS.muted, fontWeight: currentStockLeft < 5 ? 700 : 500 }}>
+                          Stock: {currentStockLeft} {currentCartQty > 0 && `(${currentCartQty} en carro)`}
+                        </div>
+                        <div style={{ fontWeight: 800, fontSize: 13, color: COLORS.primary, marginTop: 1 }}>{formatCurrency(p.price)}</div>
+                      </div>
+
+                      <button 
+                        onClick={() => quickAddProduct(p)}
+                        disabled={currentStockLeft <= 0}
+                        style={{
+                          background: currentStockLeft <= 0 ? "#ccc" : COLORS.success,
+                          color: "#fff", border: "none", borderRadius: 8,
+                          width: 34, height: 34, fontWeight: "bold", fontSize: 15,
+                          cursor: currentStockLeft <= 0 ? "not-allowed" : "pointer"
+                        }}
+                        title="Agregar 1 unidad"
+                      >
+                        +1
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Carrito de Compras de la Venta Activa */}
+            {saleItems.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <h4 style={{ margin: "0 0 8px", color: COLORS.muted, fontSize: 13, textTransform: "uppercase" }}>Carrito actual</h4>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ color: COLORS.muted, borderBottom: `1px solid ${COLORS.border}` }}>
+                      <th style={{ textAlign: "left", padding: "6px 0" }}>Producto</th>
+                      <th style={{ textAlign: "center", width: 90 }}>Cant.</th>
+                      <th style={{ textAlign: "right" }}>Precio</th>
+                      <th style={{ textAlign: "right" }}>Subtotal</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {saleItems.map(i => {
+                      const originProd = data.products.find(p => p.id === i.id);
+                      const maxAvailable = originProd ? originProd.stock : i.qty;
+
+                      return (
+                        <tr key={i.id} style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                          <td style={{ padding: "8px 0", color: COLORS.dark, fontWeight: 500 }}>{i.name}</td>
+                          <td style={{ textAlign: "center", padding: "4px 0" }}>
+                            {/* Input numérico directo para cambiar grandes cantidades fácilmente */}
+                            <input 
+                              type="number" 
+                              value={i.qty} 
+                              min="1"
+                              max={maxAvailable}
+                              onChange={e => {
+                                const val = parseInt(e.target.value) || 1;
+                                if (val > maxAvailable) {
+                                  alert(`Operación denegada: Solo hay ${maxAvailable} unidades de este artículo en inventario.`);
+                                  setSaleItems(saleItems.map(x => x.id === i.id ? { ...x, qty: maxAvailable } : x));
+                                } else {
+                                  setSaleItems(saleItems.map(x => x.id === i.id ? { ...x, qty: val } : x));
+                                }
+                              }}
+                              style={{ width: 62, padding: "5px", border: `1.5px solid ${COLORS.border}`, borderRadius: 8, textAlign: "center", fontSize: 13, outline: "none", background: COLORS.bg }} 
+                            />
+                          </td>
+                          <td style={{ textAlign: "right" }}>{formatCurrency(i.price)}</td>
+                          <td style={{ textAlign: "right", fontWeight: 700 }}>{formatCurrency(i.price * i.qty)}</td>
+                          <td style={{ textAlign: "right" }}>
+                            <Btn small onClick={() => setSaleItems(saleItems.filter(x => x.id !== i.id))} color={COLORS.danger}>✕</Btn>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyType: "space-between", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: COLORS.success }}>Total: {formatCurrency(saleTotal)}</span>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <input value={note} onChange={e => setNote(e.target.value)} placeholder="Nota u observación" style={{ border: `1.5px solid ${COLORS.border}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, outline: "none" }} />
+                    <Btn onClick={registerSale} color={COLORS.success}>Registrar venta ✓</Btn>
                   </div>
                 </div>
               </div>
-            ` : ''}
+            )}
           </div>
 
-          <div class="card">
-            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Historial de Ventas del Mes ${getMonthBadgeHTML()}</h3>
-            ${monthSales.length === 0 ? `<p style="color: #8B7355; margin:0;">No hay ventas registradas en este periodo.</p>` : `
-              <div class="table-wrapper">
-                <table>
-                  <thead><tr><th>Fecha</th><th>Productos</th><th style="text-align: right;">Total</th><th style="text-align: right;">Ganancia Bruta</th><th></th></tr></thead>
-                  <tbody>${salesHistoryRows}</tbody>
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+            <h3 style={{ margin: "0 0 14px", color: COLORS.dark, fontSize: 15 }}>Ventas del mes <MonthBadge /></h3>
+            {monthSales.length === 0 ? <p style={{ color: COLORS.muted }}>Sin ventas este mes.</p> : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ color: COLORS.muted, borderBottom: `1px solid ${COLORS.border}` }}>
+                      <th style={{ textAlign: "left", padding: "6px 8px" }}>Fecha</th>
+                      <th style={{ textAlign: "left" }}>Productos</th>
+                      <th style={{ textAlign: "right" }}>Total</th>
+                      <th style={{ textAlign: "right" }}>Ganancia Bruta</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...monthSales].reverse().map(s => (
+                      <tr key={s.id} style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                        <td style={{ padding: "8px" }}>{new Date(s.date).toLocaleDateString("es-CO")}</td>
+                        <td style={{ padding: "8px", color: COLORS.muted }}>
+                          {s.items.map(i => `${i.name} x${i.qty}`).join(", ")}
+                          {s.note && <div style={{ color: COLORS.secondary, fontSize: 11, marginTop: 2 }}>📝 Observación: {s.note}</div>}
+                        </td>
+                        <td style={{ textAlign: "right", fontWeight: 700, color: COLORS.primary }}>{formatCurrency(s.total)}</td>
+                        <td style={{ textAlign: "right", color: COLORS.success }}>{formatCurrency(s.total - s.costo)}</td>
+                        <td style={{ textAlign: "right" }}><Btn small onClick={() => deleteSale(s.id)} color={COLORS.danger}>Anular</Btn></td>
+                      </tr>
+                    ))}
+                  </tbody>
                 </table>
               </div>
-            `}
+            )}
           </div>
-        `;
-      } 
-      
-      else if (state.ventasSubTab === 'gastos') {
-        const monthExpenses = state.data.expenses.filter(e => e.month === month);
-        
-        let expensesRows = [...monthExpenses].reverse().map(e => `
-          <tr>
-            <td style="color: #8B7355;">${new Date(e.date).toLocaleDateString("es-CO")}</td>
-            <td style="font-weight: 600;">${e.description}</td>
-            <td style="color: #8B7355;">${e.category}</td>
-            <td style="text-align: right; color: #E84040; font-weight: 700;">${formatCurrency(e.amount)}</td>
-            <td style="text-align: right;"><button class="btn btn-danger btn-small" onclick="actions.deleteExpense('${e.id}')">✕</button></td>
-          </tr>
-        `).join('');
-
-        container.innerHTML = `
-          <div class="card">
-            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Registrar Gasto</h3>
-            <div class="form-row">
-              <div class="input-group wide"><label>Descripción / Concepto *</label><input type="text" id="exp-desc" class="input-field" placeholder="Ej: Compra bolsas plásticas o pago proveedor"></div>
-              <div class="input-group narrow"><label>Valor ($) *</label><input type="number" id="exp-amount" class="input-field" placeholder="0"></div>
-              <div class="input-group">
-                <label>Categoría</label>
-                <select id="exp-cat" class="select-field">
-                  <option value="General">General</option><option value="Arriendo">Arriendo</option><option value="Servicios">Servicios</option><option value="Transporte">Transporte</option><option value="Proveedor">Proveedor</option>
+        </>
+      ) : tab === "gastos" ? (
+        <>
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+            <h3 style={{ margin: "0 0 14px", color: COLORS.dark, fontSize: 15 }}>Registrar gasto</h3>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <Input label="Descripción" value={expDesc} onChange={setExpDesc} placeholder="Ej: Compra de bolsas" style={{ flex: "1 1 200px" }} />
+              <Input label="Valor ($)" type="number" value={expAmt} onChange={setExpAmt} placeholder="0" style={{ flex: "0 0 120px" }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 130px" }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.muted, textTransform: "uppercase" }}>Categoría</label>
+                <select value={expCat} onChange={e => setExpCat(e.target.value)}
+                  style={{ border: `1.5px solid ${COLORS.border}`, borderRadius: 10, padding: "9px 12px", fontSize: 14, background: COLORS.bg, color: COLORS.dark, outline: "none" }}>
+                  <option value="">Seleccionar...</option>
+                  {expCategories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <button class="btn btn-danger" onclick="actions.saveExpense()">Registrar Gasto</button>
+              <Btn onClick={registerExpense} color={COLORS.danger}>Registrar Gasto</Btn>
             </div>
           </div>
 
-          <div class="card">
-            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Historial de Gastos del Mes ${getMonthBadgeHTML()}</h3>
-            ${monthExpenses.length === 0 ? `<p style="color: #8B7355; margin:0;">No hay gastos registrados en este periodo.</p>` : `
-              <div class="table-wrapper">
-                <table>
-                  <thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th style="text-align: right;">Valor</th><th></th></tr></thead>
-                  <tbody>${expensesRows}</tbody>
-                </table>
-              </div>
-            `}
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+            <h3 style={{ margin: "0 0 14px", color: COLORS.dark, fontSize: 15 }}>Gastos del mes <MonthBadge /></h3>
+            {monthExpenses.length === 0 ? <p style={{ color: COLORS.muted }}>Sin gastos registrados.</p> : (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ color: COLORS.muted, borderBottom: `1px solid ${COLORS.border}` }}>
+                    <th style={{ textAlign: "left", padding: "6px 8px" }}>Fecha</th>
+                    <th style={{ textAlign: "left" }}>Descripción</th>
+                    <th style={{ textAlign: "left" }}>Categoría</th>
+                    <th style={{ textAlign: "right" }}>Valor</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...monthExpenses].reverse().map(e => (
+                    <tr key={e.id} style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                      <td style={{ padding: "8px" }}>{new Date(e.date).toLocaleDateString("es-CO")}</td>
+                      <td style={{ padding: "8px" }}>{e.description}</td>
+                      <td style={{ padding: "8px", color: COLORS.muted }}>{e.category}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: COLORS.danger }}>{formatCurrency(e.amount)}</td>
+                      <td style={{ textAlign: "right" }}><Btn small onClick={() => deleteExpense(e.id)} color={COLORS.danger}>✕</Btn></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-        `;
-      } 
-      
-      else if (state.ventasSubTab === 'ingresos') {
-        const monthIncomes = (state.data.incomes || []).filter(i => i.month === month);
-        
-        let incomesRows = [...monthIncomes].reverse().map(i => `
-          <tr>
-            <td style="color: #8B7355;">${new Date(i.date).toLocaleDateString("es-CO")}</td>
-            <td style="font-weight: 600;">${i.description}</td>
-            <td style="color: #8B7355;">${i.category}</td>
-            <td style="text-align: right; color: #6DBE45; font-weight: 700;">${formatCurrency(i.amount)}</td>
-            <td style="text-align: right;"><button class="btn btn-danger btn-small" onclick="actions.deleteIncome('${i.id}')">✕</button></td>
-          </tr>
-        `).join('');
-
-        container.innerHTML = `
-          <div class="card">
-            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Registrar Otro Ingreso (No Ventas)</h3>
-            <div class="form-row">
-              <div class="input-group wide"><label>Descripción / Concepto *</label><input type="text" id="inc-desc" class="input-field" placeholder="Ej: Inyección de capital, servicio extra, premio"></div>
-              <div class="input-group narrow"><label>Valor ($) *</label><input type="number" id="inc-amount" class="input-field" placeholder="0"></div>
-              <div class="input-group">
-                <label>Categoría</label>
-                <select id="inc-cat" class="select-field">
-                  <option value="General">General</option><option value="Capital">Inyección Capital</option><option value="Servicios">Servicios</option><option value="Otros">Otros</option>
+        </>
+      ) : (
+        <>
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+            <h3 style={{ margin: "0 0 14px", color: COLORS.dark, fontSize: 15 }}>Registrar Otro Ingreso (No Ventas)</h3>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <Input label="Descripción / Concepto" value={incDesc} onChange={setIncDesc} placeholder="Ej: Inyección de capital o servicio extra" style={{ flex: "1 1 200px" }} />
+              <Input label="Valor ($)" type="number" value={incAmt} onChange={setIncAmt} placeholder="0" style={{ flex: "0 0 120px" }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 130px" }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.muted, textTransform: "uppercase" }}>Categoría</label>
+                <select value={incCat} onChange={e => setIncCat(e.target.value)}
+                  style={{ border: `1.5px solid ${COLORS.border}`, borderRadius: 10, padding: "9px 12px", fontSize: 14, background: COLORS.bg, color: COLORS.dark, outline: "none" }}>
+                  <option value="">Seleccionar...</option>
+                  {incCategories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <button class="btn btn-info" onclick="actions.saveIncome()">Registrar Ingreso</button>
+              <Btn onClick={registerIncome} color={COLORS.info}>Registrar Ingreso</Btn>
             </div>
           </div>
 
-          <div class="card">
-            <h3 style="margin: 0 0 14px 0; font-size: 15px;">Historial de Otros Ingresos del Mes ${getMonthBadgeHTML()}</h3>
-            ${monthIncomes.length === 0 ? `<p style="color: #8B7355; margin:0;">No hay otros ingresos registrados en este periodo.</p>` : `
-              <div class="table-wrapper">
-                <table>
-                  <thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th style="text-align: right;">Valor</th><th></th></tr></thead>
-                  <tbody>${incomesRows}</tbody>
-                </table>
-              </div>
-            `}
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+            <h3 style={{ margin: "0 0 14px", color: COLORS.dark, fontSize: 15 }}>Historial de Otros Ingresos <MonthBadge /></h3>
+            {monthIncomes.length === 0 ? <p style={{ color: COLORS.muted }}>Sin otros ingresos registrados en este periodo.</p> : (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ color: COLORS.muted, borderBottom: `1px solid ${COLORS.border}` }}>
+                    <th style={{ textAlign: "left", padding: "6px 8px" }}>Fecha</th>
+                    <th style={{ textAlign: "left" }}>Descripción</th>
+                    <th style={{ textAlign: "left" }}>Categoría</th>
+                    <th style={{ textAlign: "right" }}>Valor</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...monthIncomes].reverse().map(i => (
+                    <tr key={i.id} style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                      <td style={{ padding: "8px" }}>{new Date(i.date).toLocaleDateString("es-CO")}</td>
+                      <td style={{ padding: "8px" }}>{i.description}</td>
+                      <td style={{ padding: "8px", color: COLORS.muted }}>{i.category}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: COLORS.success }}>{formatCurrency(i.amount)}</td>
+                      <td style={{ textAlign: "right" }}><Btn small onClick={() => deleteIncome(i.id)} color={COLORS.danger}>✕</Btn></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-        `;
-      }
-    }
+        </>
+      )}
+    </div>
+  );
+}
 
-    // ─── INICIALIZACIÓN AUTOMÁTICA ──────────────────────────────────────────────
-    render();
-  </script>
-</body>
-</html>
+// ─── REPORTES ─────────────────────────────────────────────────────────────────
+function Reportes({ data, setData }) {
+  const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+  function closeMonth() {
+    const month = getCurrentMonthKey();
+    const [year, m] = month.split("-");
+    const monthName = `${MONTHS[parseInt(m) - 1]} ${year}`;
+
+    const monthSales = data.sales.filter(s => s.month === month);
+    const monthExpenses = data.expenses.filter(e => e.month === month);
+    const monthIncomes = (data.incomes || []).filter(i => i.month === month);
+
+    const totalVentas = monthSales.reduce((a, s) => a + s.total, 0);
+    const totalOtros = monthIncomes.reduce((a, i) => a + i.amount, 0);
+    const ingresos = totalVentas + totalOtros;
+
+    const gastos = monthExpenses.reduce((a, e) => a + e.amount, 0);
+    const ganancia = monthSales.reduce((a, s) => a + (s.total - s.costo), 0);
+    const invSinGanancia = data.products.reduce((a, p) => a + p.cost * p.stock, 0);
+    const invConGanancia = data.products.reduce((a, p) => a + p.price * p.stock, 0);
+
+    const report = {
+      id: Date.now().toString(),
+      month,
+      monthName,
+      closedAt: new Date().toISOString(),
+      ingresos,
+      gastos,
+      utilidad: ingresos - gastos,
+      gananciaBruta: ganancia,
+      invSinGanancia,
+      invConGanancia,
+      salesCount: monthSales.length,
+      topProducts: [...data.products]
+        .map(p => ({
+          name: p.name,
+          sold: monthSales.flatMap(s => s.items).filter(i => i.id === p.id).reduce((a, i) => a + i.qty, 0),
+        }))
+        .filter(p => p.sold > 0)
+        .sort((a, b) => b.sold - a.sold)
+        .slice(0, 5),
+    };
+
+    const existing = data.reports.find(r => r.month === month);
+    const reports = existing
+      ? data.reports.map(r => r.month === month ? report : r)
+      : [...data.reports, report];
+
+    const newData = { ...data, reports };
+    setData(newData);
+    saveData(newData);
+    alert("Reporte mensual archivado y consolidado con éxito.");
+  }
+
+  const currentMonth = getCurrentMonthKey();
+  const hasCurrentReport = data.reports.some(r => r.month === currentMonth);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <h2 style={{ margin: 0, color: COLORS.dark }}>📊 Reportes Mensuales</h2>
+        <Btn onClick={closeMonth} color={COLORS.secondary}>
+          {hasCurrentReport ? "🔄 Actualizar mes actual" : "📋 Guardar reporte del mes"}
+        </Btn>
+      </div>
+
+      {data.reports.length === 0 ? (
+        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 30, textAlign: "center", color: COLORS.muted }}>
+          <p style={{ fontSize: 18, margin: "0 0 8px" }}>📁 Sin reportes aún</p>
+          <p style={{ margin: 0 }}>Guarda el reporte del mes para ver el historial aquí.</p>
+        </div>
+      ) : (
+        [...data.reports].reverse().map(r => (
+          <div key={r.id} style={{ background: COLORS.card, border: `2px solid ${r.month === currentMonth ? COLORS.secondary : COLORS.border}`, borderRadius: 16, padding: 20, marginBottom: 5 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+              <h3 style={{ margin: 0, color: COLORS.dark, fontSize: 17 }}>📅 {r.monthName}</h3>
+              {r.month === currentMonth && <span style={{ background: COLORS.secondary, color: "#fff", borderRadius: 20, padding: "2px 12px", fontSize: 12, fontWeight: 700 }}>Mes actual</span>}
+              <span style={{ color: COLORS.muted, fontSize: 12, marginLeft: "auto" }}>Guardado: {new Date(r.closedAt).toLocaleDateString("es-CO")}</span>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+              <StatCard label="Ingresos Totales" value={formatCurrency(r.ingresos)} color={COLORS.success} />
+              <StatCard label="Gastos" value={formatCurrency(r.gastos)} color={COLORS.danger} />
+              <StatCard label="Utilidad neta" value={formatCurrency(r.utilidad)} color={r.utilidad >= 0 ? COLORS.success : COLORS.danger} />
+              <StatCard label="Ganancia bruta (Ventas)" value={formatCurrency(r.gananciaBruta)} color={COLORS.primary} />
+            </div>
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+              <StatCard label="Inventario (costo)" value={formatCurrency(r.invSinGanancia)} color={COLORS.info} sub={`${r.salesCount} ventas`} />
+              <StatCard label="Inventario (precio)" value={formatCurrency(r.invConGanancia)} color={COLORS.secondary} />
+            </div>
+
+            {r.topProducts && r.topProducts.length > 0 && (
+              <div>
+                <div style={{ fontWeight: 700, color: COLORS.dark, marginBottom: 6, fontSize: 13 }}>🏆 Más vendidos:</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {r.topProducts.map((p, i) => (
+                    <span key={i} style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 20, padding: "4px 12px", fontSize: 13, color: COLORS.dark }}>
+                      {p.name} ({p.sold})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// ─── APP ─────────────────────────────────────────────────────────────────────
+export default function App() {
+  const [data, setData] = useState(loadData);
+  const [tab, setTab] = useState("dashboard");
+
+  const tabs = [
+    { id: "dashboard", label: "🏠 Principal" },
+    { id: "inventario", label: "📦 Inventario" },
+    { id: "ventas", label: "💰 Ventas & Gastos" },
+    { id: "reportes", label: "📊 Reportes" },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+      {/* Header */}
+      <div style={{ background: COLORS.primary, padding: "16px 24px", display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ fontSize: 28 }}>🍬</span>
+        <div>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 18, letterSpacing: -0.5 }}>Mi Dulcería</div>
+          <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12 }}>Gestión de tu negocio</div>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <div style={{ background: COLORS.card, borderBottom: `1px solid ${COLORS.border}`, padding: "0 12px", display: "flex", gap: 0, overflowX: "auto" }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            background: "transparent", border: "none", padding: "14px 16px",
+            fontWeight: tab === t.id ? 700 : 500, fontSize: 14,
+            color: tab === t.id ? COLORS.primary : COLORS.muted,
+            borderBottom: tab === t.id ? `3px solid ${COLORS.primary}` : "3px solid transparent",
+            cursor: "pointer", whiteSpace: "nowrap", transition: "all .2s"
+          }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
+        {tab === "dashboard" && <Dashboard data={data} />}
+        {tab === "inventario" && <Inventario data={data} setData={setData} />}
+        {tab === "ventas" && <VentasGastos data={data} setData={setData} />}
+        {tab === "reportes" && <Reportes data={data} setData={setData} />}
+      </div>
+    </div>
+  );
+}
