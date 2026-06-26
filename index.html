@@ -162,7 +162,7 @@
     .prod-img-box { width: 44px; height: 44px; border-radius: 8px; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border); flex-shrink: 0; }
     .prod-img-box img { width: 100%; height: 100%; object-fit: cover; }
 
-    /* Modal del Ticket / Factura */
+    /* Modal del Ticket */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -205,6 +205,7 @@
     <button class="tab-btn" onclick="switchTab('ventas', this)">💰 Ventas & Gastos</button>
     <button class="tab-btn" onclick="switchTab('clientes', this)">👥 Clientes</button>
     <button class="tab-btn" onclick="switchTab('reportes', this)">📊 Reportes</button>
+    <button class="tab-btn" onclick="switchTab('respaldos', this)">💾 Respaldos</button>
   </div>
 
   <div class="container">
@@ -374,7 +375,7 @@
               <tbody id="cart-table-body"></tbody>
             </table>
 
-            <!-- DATOS DEL CLIENTE PARA EL TICKET -->
+            <!-- DATOS DEL CLIENTE -->
             <div style="margin-top: 16px; background: var(--bg); padding: 14px; border-radius: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
               <div class="form-group" style="flex: 1 1 200px; position: relative;">
                 <label>👤 Nombre del Cliente</label>
@@ -538,9 +539,39 @@
       <div id="reports-container"></div>
     </div>
 
+
+    <!-- PANEL 6: RESPALDOS (NUEVA PESTAÑA) -->
+    <div id="panel-respaldos" class="panel">
+      <h2>💾 Copias de Seguridad (JSON)</h2>
+      <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
+        <p style="margin: 0; color: var(--muted); line-height: 1.5;">
+          Usa esta sección para asegurar tu información. Puedes descargar todo el estado del sistema en un solo archivo y guardarlo en tu computadora o celular. Si cambias de dispositivo, solo debes subir el archivo aquí para continuar donde quedaste.
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 4px 0;">
+
+        <div>
+          <h3 style="margin: 0 0 8px 0; color: var(--success);">1. Guardar copia de seguridad</h3>
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: var(--muted);">Genera y descarga un archivo con todo tu inventario, ventas, clientes y reportes.</p>
+          <button class="btn btn-success" onclick="exportBackupJSON()">📥 Descargar archivo JSON</button>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 4px 0;">
+
+        <div>
+          <h3 style="margin: 0 0 8px 0; color: var(--primary);">2. Restaurar copia de seguridad</h3>
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: var(--muted);">Selecciona un archivo `.json` guardado previamente para cargar tus datos anteriores.</p>
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="file" id="import-json-file" class="input-field" accept=".json" style="background: #fff; max-width: 280px;">
+            <button class="btn" onclick="importBackupJSON()">📤 Subir y Restaurar Datos</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- MODAL / VENTANA DEL TICKET FACTURA -->
+  <!-- MODAL / VENTANA DEL TICKET -->
   <div class="modal-overlay" id="ticket-modal">
     <div class="ticket-box">
       <div style="text-align: center; font-weight: bold; font-size: 16px;">🍬 MI DULCERÍA 🍬</div>
@@ -572,7 +603,7 @@
       expenses: [],
       incomes: [],
       reports: [],
-      customers: [] // Nueva base de datos de clientes
+      customers: []
     };
 
     let cart = [];
@@ -583,12 +614,7 @@
       if(saved) {
         try { state = JSON.parse(saved); } catch(e) { console.error(e); }
       }
-      if(!state.products) state.products = [];
-      if(!state.sales) state.sales = [];
-      if(!state.expenses) state.expenses = [];
-      if(!state.incomes) state.incomes = [];
-      if(!state.reports) state.reports = [];
-      if(!state.customers) state.customers = [];
+      verifyStateFields();
       
       updateBadges();
       renderDashboard();
@@ -598,6 +624,15 @@
       renderClientes();
       updateCustomerDatalist();
       renderReportes();
+    }
+
+    function verifyStateFields() {
+      if(!state.products) state.products = [];
+      if(!state.sales) state.sales = [];
+      if(!state.expenses) state.expenses = [];
+      if(!state.incomes) state.incomes = [];
+      if(!state.reports) state.reports = [];
+      if(!state.customers) state.customers = [];
     }
 
     function saveState() {
@@ -653,6 +688,59 @@
       state.customers.forEach(c => {
         list.innerHTML += `<option value="${c.name}">`;
       });
+    }
+
+    // ─── EXPORTAR E IMPORTAR JSON (NUEVO) ───
+    function exportBackupJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      
+      const dateStr = new Date().toISOString().slice(0,10);
+      downloadAnchor.setAttribute("download", `respaldo_dulceria_${dateStr}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importBackupJSON() {
+      const fileInput = document.getElementById('import-json-file');
+      const file = fileInput.files[0];
+      
+      if(!file) {
+        alert("Por favor selecciona un archivo .json primero.");
+        return;
+      }
+
+      if(!confirm("¿Estás seguro de restaurar este respaldo? Se sobrescribirá la información actual que no hayas guardado.")) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          
+          // Validación simple de estructura básica
+          if(parsed && (parsed.products || parsed.sales || parsed.expenses)) {
+            state = parsed;
+            verifyStateFields();
+            saveState();
+            
+            alert("¡Copia de seguridad restaurada de forma exitosa!");
+            fileInput.value = "";
+            
+            // Recargar e inicializar todo el aplicativo visualmente con los nuevos datos
+            updateBadges();
+            updateCustomerDatalist();
+            switchTab('dashboard', document.querySelector('.nav-tabs button'));
+          } else {
+            alert("El archivo no parece ser un respaldo válido de este aplicativo.");
+          }
+        } catch(err) {
+          console.error(err);
+          alert("Error al leer el archivo JSON. Verifica que el archivo no esté corrupto.");
+        }
+      };
+      reader.readAsText(file);
     }
 
     // ─── DASHBOARD ───
@@ -957,17 +1045,15 @@
       const customerPhone = document.getElementById('sale-customer-phone').value.trim() || "";
       const note = document.getElementById('sale-note').value.trim();
 
-      // Guardar o actualizar cliente automáticamente en la base de datos interna
       if(customerName !== "Cliente General") {
         const existingCust = state.customers.find(c => c.name.toLowerCase() === customerName.toLowerCase());
         if(!existingCust) {
           state.customers.push({ name: customerName, phone: customerPhone });
         } else if(customerPhone) {
-          existingCust.phone = customerPhone; // Actualizar teléfono si se aporta uno nuevo
+          existingCust.phone = customerPhone;
         }
       }
 
-      // Descontar stock
       state.products.forEach(p => {
         const item = cart.find(c => c.id === p.id);
         if(item) p.stock = Math.max(0, p.stock - item.qty);
@@ -975,7 +1061,6 @@
 
       const saleId = Date.now().toString();
 
-      // Registrar venta incluyendo datos del cliente
       state.sales.push({
         id: saleId,
         month,
@@ -1000,11 +1085,9 @@
       renderVentasTabHistories();
       updateCustomerDatalist();
       
-      // Mostrar el ticket inmediatamente para satisfacción visual
       openTicket(saleId);
     }
 
-    // ─── TICKET FACTURA MODAL LOGIC ───
     function openTicket(saleId) {
       const sale = state.sales.find(s => s.id === saleId);
       if(!sale) return;
@@ -1175,7 +1258,7 @@
         [...mIncomes].reverse().forEach(i => {
           tbodyIncomes.innerHTML += `<tr>
             <td>${new Date(i.date).toLocaleDateString("es-CO")}</td>
-            <td>i.description}</td>
+            <td>${i.description}</td>
             <td style="color:var(--muted);">${i.category}</td>
             <td style="text-align:right; font-weight:700; color:var(--success);">${formatCurrency(i.amount)}</td>
             <td style="text-align:right;"><button class="btn btn-sm btn-danger" onclick="deleteIncome('${i.id}')">✕</button></td>
@@ -1195,7 +1278,6 @@
       }
 
       state.customers.forEach(c => {
-        // Calcular cuántas compras y cuánto dinero total ha gastado este cliente específico
         const cSales = state.sales.filter(s => s.customerName.toLowerCase() === c.name.toLowerCase());
         const totalCompras = cSales.length;
         const totalDinero = cSales.reduce((sum, s) => sum + s.total, 0);
